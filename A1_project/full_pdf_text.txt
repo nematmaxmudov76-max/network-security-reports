@@ -1,0 +1,1137 @@
+TARMOQ XAVFSIZLIGI | A1 | 1-variant | VMware va universitet proksisi
+
+TARMOQ XAVFSIZLIGI
+
+A1 Tarmoq aktivlari tahdidlar va risklarni tahlil qilish
+5-semestr • 1-variant
+Tayyor VMware obrazlari asosida aktivlar inventari va risk reyestrini tuzish
+Mashg‘ulot maqsadi. Talaba izolyatsiyalangan virtual laboratoriyada tarmoq aktivlarini aniqlaydi, ularning
+vazifasi va qiymatini tavsiflaydi, ochiq portlar hamda mavjud himoya nazoratlarini dalillar asosida qayd etadi;
+tahdid–zaiflik–oqibat zanjirini tuzib, ehtimollik va ta’sir mezonlari bo‘yicha risklarni baholaydi.
+Kutiladigan natija. Talaba tayyor VMware obrazidan ikkita mustaqil VM ochadi, universitet proksisi orqali
+paketlarni o‘rnatadi va laboratoriyani izolyatsiya qiladi. So‘ng aktiv, tahdid, zaiflik, nazorat va riskni farqlab, Nmap
+natijasini ss bilan tekshiradi; kamida 6 ta asoslangan riskni baholaydi va eng muhim 3 tasi uchun prognoz qoldiq
+riskni hisoblaydi.
+Ko‘rsatkich
+
+Qiymat
+
+Tavsiya etilgan vaqt
+
+Asosiy ish 80 daqiqa; talabaning dastlabki tayyorgarligi alohida bajariladi
+
+Bajarish muhiti
+
+Windows 11 host va VMware Workstation
+
+Virtual mashinalar
+
+SEC-ANALYST va SRV-1: UbuntuServer_24.04_VM.7z obrazining 2 ta alohida nusxasi; har
+biri 2 vCPU, 2 GB RAM; obrazdagi disk saqlanadi
+
+Izolyatsiyalangan segment
+
+SEC-LAB: VMnet2 Host-only, 192.168.56.0/24; DHCP o‘chiq; laboratoriya interfeysida
+gateway va DNS yo‘q
+
+Amaliy model
+
+2 ta VM, aktivlarni aniqlash, xizmatlarni tekshirish, tahdid modeli va risk reyestri
+
+Asosiy vositalar
+
+iproute2, Nmap, curl, OpenSSH Server, Nginx, UFW
+
+Baholash
+
+10 ball
+
+A1 Tarmoq xavfsizligi |
+
+1
+
+TARMOQ XAVFSIZLIGI | A1 | 1-variant | VMware va universitet proksisi
+
+0 Talaba bajaradigan dastlabki tayyorgarlik
+O‘qituvchining tayyorgarlik vazifasi — ishlaydigan VMware obrazini tayyorlab, fayl serverga joylashtirish.
+VMware Workstationni o‘rnatish, obrazni ko‘chirish va ochish, VM nusxalarini ajratish, tarmoq va proksini
+sozlash, paketlarni o‘rnatish, xizmatlarni ishga tushirish hamda snapshot olishni talabaning o‘zi bajaradi.
+Birinchi marta bajariladigan bu ishlar asosiy 80 daqiqalik tahlildan oldin yakunlanadi. Taxminiy tayyorgarlik vaqti
+40–60 daqiqa; fayl ko‘chirish, arxivni ochish va paket yuklash tezligiga qarab uzayishi mumkin. Tayyor obraz
+mavjudligi paketlar va laboratoriya tarmog‘i oldindan sozlanganligini anglatmaydi.
+
+0 1 Fayl serverga kirish
+Windowsda Win + E tugmalarini bosing. File Explorer manzil satriga quyidagi UNC manzilni ikki teskari qiya
+chiziq bilan kiriting va Enter bosing. Manzil brauzerning qidiruv satriga emas, File Explorer manzil satriga
+yoziladi.
+\\172.18.233.234\files
+
+Kirish oynasida foydalanuvchi nomi: fileuser; parol: 1234567. Bu rekvizitlar fayl server uchun berilgan; ular
+Ubuntu ichidagi hisob yoki sudo paroli deb qabul qilinmaydi.
+
+1-rasm. Windows File Explorer orqali fayl serverga kirish. Foydalanuvchi taqdim etgan skrinshot.
+
+0 2 Dasturlar va obrazlarni lokal diskka ko‘chirish
+\\172.18.233.234\files\Dasturlar
+
+Dasturlar papkasidan UbuntuServer_24.04_VM.7z va VMware-workstation-full-17.6.4.exe fayllarini o‘z
+kompyuteringizdagi, masalan, D:\SEC-LAB\Downloads papkasiga ko‘chiring. Agar D: disk bo‘lmasa, yozish
+huquqi va yetarli bo‘sh joyi bor boshqa lokal papkani tanlang. VMni tarmoq papkasidan yoki .7z arxivi ichidan
+ishga tushirmang.
+
+A1 Tarmoq xavfsizligi |
+
+2
+
+TARMOQ XAVFSIZLIGI | A1 | 1-variant | VMware va universitet proksisi
+
+2-rasm. Dasturlar papkasidagi Ubuntu Desktop, Ubuntu Server VMware obrazlari va VMware Workstation o‘rnatuvchisi.
+
+Mazkur A1 uchun Ubuntu Server obrazining ikkita nusxasi ishlatiladi. Ubuntu_24.04_VM.7z — Desktop obrazi; u
+boshqa mashg‘ulotlar yoki grafik muhit talab etilganda mavjud. A1 da Linux ISO orqali o‘rnatilmaydi va
+VirtualBox qo‘llanmaydi. Keyingi mashg‘ulotlarda boshqa OT kerak bo‘lsa, serverga joylashtirilgan tegishli tayyor
+VMware obrazi olinadi.
+\\172.18.233.234\files\ISO
+
+ISO papkasi ham serverda mavjud. Quyidagi rasm uning joylashuvini ko‘rsatadi; A1 uchun bu papkadagi ISO/IMG
+fayllarni yuklash yoki ulardan Linux o‘rnatish talab qilinmaydi. VMware o‘rnatuvchisi yuborilgan skrinshotda
+Dasturlar papkasida ko‘rsatilgan.
+
+3-rasm. Fayl serverdagi ISO papkasi. A1 da tayyor VMware obrazi ishlatiladi.
+
+0 3 VMware Workstation va ikkita mustaqil VM
+1. VMware Workstation o‘rnatilmagan bo‘lsa, lokal diskka ko‘chirilgan o‘rnatuvchini ishga tushiring va o‘rnatishni
+yakunlang. Windows administrator rekvizitlari talab qilinishi mumkin; qayta yuklash so‘ralsa, bajaring.
+2. UbuntuServer_24.04_VM.7z arxivini Windowsdagi 7z formatini qo‘llaydigan arxivator bilan to‘liq oching.
+Arxivator o‘rnatilmagan bo‘lsa, avval uni o‘rnating. Ochilgan papkada .vmx konfiguratsiya va .vmdk virtual disk
+fayllari borligini tekshiring.
+3. VM o‘chiq holatda, ochilgan papkaning barcha fayllarini ikkita alohida papkaga nusxalang: D:\SEC-LAB\SECANALYST va D:\SEC-LAB\SRV-1. Bitta .vmdk faylni ikki VM uchun umumiy ishlatmang.
+4. VMware Workstationda File → Open orqali birinchi papkadagi .vmx faylni oching. Xuddi shunday ikkinchi
+papkadagi .vmx faylni ham oching. VM → Settings → Options → General orqali ko‘rinadigan nomlarni SECANALYST va SRV-1 deb belgilang.
+5. Har bir VM o‘chiq holatda 2 vCPU va 2 GB RAM ajrating. Obrazning mavjud virtual diskini saqlang. Host
+diskida arxivdan chiqarilgan ikkita nusxa va snapshotlar uchun yetarli joy borligini tekshiring.
+6. Birinchi ishga tushirishda “I moved it” yoki “I copied it” savoli chiqsa, har bir nusxa uchun “I copied it” ni
+tanlang. Ikki nusxa tarmoq adapterlarining MAC manzillari turlicha bo‘lishi kerak.
+A1 Tarmoq xavfsizligi |
+
+3
+
+TARMOQ XAVFSIZLIGI | A1 | 1-variant | VMware va universitet proksisi
+
+7. Ubuntu konsoliga obraz uchun berilgan hisob bilan kiring; login va parolni obrazga tegishli yo‘riqnoma yoki
+unga ilova qilingan ma’lumotdan oling. Bu hujjatda Ubuntu hisobi berilmagan. fileuser/1234567 faqat fayl server
+hisobidir.
+VM ichidagi host nomini ham alohida belgilang. Quyidagi birinchi buyruq faqat SEC-ANALYST da, ikkinchisi
+faqat SRV-1 da bajariladi:
+sudo hostnamectl set-hostname SEC-ANALYST
+sudo hostnamectl set-hostname SRV-1
+
+Natijani har bir VMda hostnamectl bilan tekshiring. Prompt darhol yangilanmasa, terminaldan chiqib qayta kiring.
+
+0 4 NAT va SEC LAB tarmog‘ini yaratish
+VMlarni o‘chiring. VMware Workstationda Edit → Virtual Network Editor → Change Settings ni oching. Talaba
+o‘z kompyuterida quyidagi virtual tarmoqlarni sozlaydi. VMnet2 allaqachon boshqa ish uchun band bo‘lsa, bo‘sh
+VMnet tanlab, ikkala VMni ham o‘sha tarmoqqa ulang va hisobotda nomini qayd eting.
+Tarmoq
+
+Sozlama
+
+Vazifa
+
+VMnet8
+
+NAT; DHCP yoqilgan
+
+Paketlarni universitet proksisi orqali yuklash uchun
+vaqtinchalik ulanish
+
+VMnet2
+
+Host-only; subnet 192.168.56.0; mask 255.255.255.0;
+DHCP o‘chirilgan
+
+SEC-LAB laboratoriya segmenti; host virtual adapteri
+odatda 192.168.56.1
+
+VMnet2 uchun “Use local DHCP service to distribute IP address to VMs” belgisini olib tashlang. “Connect a host
+virtual adapter to this network” yoqilgan bo‘lishi mumkin. Windows Internet Connection Sharing yoki Network
+Bridge orqali VMnet2 ni universitet LANiga ulamang. VMnet8 boshqa subnetda bo‘lishi kerak.
+Har bir VMda VM → Settings orqali Network Adapter ni NAT ga o‘rnating. Add → Network Adapter orqali
+ikkinchi adapter qo‘shing va Custom: Specific virtual network → VMnet2 ni tanlang. Tayyor obrazdagi ortiqcha
+adapterlarni uzing; Bridged adapter ulangan qolmasin. Ishlatiladigan ikkala adapterda “Connected” va “Connect at
+power on” holatini tekshiring.
+VMni yoqing. Quyidagilar bilan interfeyslarni aniqlang. VMware interfeyslari ens33, ens37 yoki boshqa nomda
+bo‘lishi mumkin; nomlarni taxmin qilmang. ip -br link dagi MAC manzilni VM Settings → Network Adapter →
+Advanced dagi MAC bilan solishtirib, NAT va laboratoriya interfeysini ajrating.
+ip -br link
+ip -br addr
+ip route
+ip route get 172.18.1.1
+
+NAT interfeysi VMnet8 DHCP xizmatidan IP va default route olishi kerak. Proksi manziliga marshrut NAT
+interfeysidan chiqadi. VMga 172.18.1.1 manzilini IP yoki gateway qilib bermang: bu universitet proksi serverining
+manzili. DHCP orqali olingan gateway saqlanadi.
+NAT da IPv4 manzil olinmasa, avval VMware DHCP/NAT xizmatlari va adapter ulanishini tekshiring. Ubuntu
+Serverda sudo netplan get va /etc/netplan/*.yaml orqali mavjud konfiguratsiyani ko‘ring. NAT interfeysining
+amaldagi yozuvida dhcp4: true bo‘lsin. Eski nom yoki MACga bog‘langan yozuvni yangi NAT interfeysiga
+moslang; mavjud faylni avval nusxalab oling. O‘zgartirishni sudo netplan try bilan sinab, konsolda tasdiqlang. Bir
+interfeys uchun bir-biriga zid yangi YAML yozuvlarini ko‘paytirmang.
+Paket o‘rnatishni dastlab SEC-ANALYST da, keyin SRV-1 da ketma-ket bajaring. Tayyor obrazdagi DHCP
+identifikatori nusxalarda bir xil bo‘lib qolgan bo‘lsa ham, bittadan yoqib sozlash NAT manzili to‘qnashuvini
+chetlab o‘tadi. Asosiy ishda NAT uziladi va SEC-LAB uchun turli statik manzillar beriladi.
+
+A1 Tarmoq xavfsizligi |
+
+4
+
+TARMOQ XAVFSIZLIGI | A1 | 1-variant | VMware va universitet proksisi
+
+0 5 Universitet proksisini ikkala VMda sozlash
+Quyidagi buyruqlar har bir Ubuntu VM terminalida bajariladi. export joriy shell va undan ochilgan dasturlarga
+ta’sir qiladi; yangi terminal yoki qayta yuklashdan keyin kerak bo‘lsa takrorlang. Bu sozlama barcha dasturlarni
+avtomatik ravishda proksidan o‘tkazmaydi.
+export http_proxy="http://172.18.1.1:2500"
+export https_proxy="http://172.18.1.1:2500"
+export HTTP_PROXY="http://172.18.1.1:2500"
+export HTTPS_PROXY="http://172.18.1.1:2500"
+
+Lokal laboratoriya manzillariga murojaat proksiga ketmasligi uchun quyidagilarni ham kiriting:
+export no_proxy="localhost,127.0.0.1,192.168.56.10,192.168.56.20"
+export NO_PROXY="$no_proxy"
+
+https_proxy qiymatida ham http:// yozilishi to‘g‘ri: mijoz HTTP proksiga ulanadi, HTTPS saytga tunnel orqali
+murojaat qiladi. sudo orqali ishlaydigan APT uchun alohida doimiy konfiguratsiya yarating. Agar 99proxy
+avvaldan mavjud bo‘lsa, uni avval o‘z uy papkangizga zaxiralang.
+sudo tee /etc/apt/apt.conf.d/99proxy >/dev/null <<'EOF'
+Acquire::http::Proxy "http://172.18.1.1:2500";
+Acquire::https::Proxy "http://172.18.1.1:2500";
+Acquire::ftp::Proxy
+"http://172.18.1.1:2500";
+EOF
+
+EOF satri alohida va boshida bo‘sh joysiz yoziladi. HTTP/HTTPS parametrlari Ubuntu paketlarini yuklashda
+ishlatiladi; FTP satri berilgan universitet konfiguratsiyasiga muvofiq saqlandi, ushbu A1 da FTP tekshirilmaydi.
+APT fayli terminal yopilganda ham saqlanadi.
+apt-config dump | grep -i proxy
+sudo apt update
+
+sudo apt update ombor indekslarini muvaffaqiyatli yangilashi kerak; proksi yoki ombor xatolari bo‘lsa, keyingi
+bosqichga o‘tishdan oldin ularni hal qiling. ping 8.8.8.8 ishlamasligi HTTP proksi nosozligini isbotlamaydi: ping
+ushbu proksi orqali ishlamaydi.
+
+0 6 Paketlar va xizmatlarni talaba tayyorlashi
+SEC-ANALYST da:
+sudo apt install -y nmap curl iproute2 iputils-ping
+nmap --version | head -n 1
+
+SRV-1 da:
+sudo apt install -y openssh-server nginx ufw curl iproute2 iputils-ping
+sudo systemctl enable --now ssh nginx
+systemctl is-active ssh nginx
+
+Natijada ssh va nginx uchun active chiqishi kutiladi. SRV-1 da curl ham o‘rnatiladi, chunki u lokal xizmat va
+HTTP dalilini tekshirishda ishlatiladi. UFW holatini hozircha o‘zgartirmang. apt update paketlar ro‘yxatini
+yangilaydi; bu barcha paketlar yangilanganini anglatmaydi. A1 da majburiy to‘liq apt upgrade talab qilinmaydi.
+curl o‘rnatilgach, tashqi HTTP/HTTPS so‘rovini tekshirish mumkin:
+curl -I --max-time 20 https://ubuntu.com
+
+Saytdan HTTP javob kelishi proksi yo‘li ishlayotganini ko‘rsatadi. 407 — proksi autentifikatsiyasi talabi; timeout
+— NAT, marshrut yoki proksiga yetib borish muammosi bo‘lishi mumkin. Proksi qo‘shimcha hisob talab qilsa,
+fileuser rekvizitlarini avtomatik qo‘llamang.
+
+0 7 NATni uzish va boshlang‘ich snapshot
+Har bir VMda paketlar o‘rnatilgach, VMware Settings → NAT adapter uchun “Connected” va “Connect at power
+on” belgilarini olib tashlang. VMnet2 laboratoriya adapteri ulangan qolsin. Har ikkala VMni bir vaqtda yoqishdan
+va Nmap ishlatishdan oldin NAT uzilganini tekshiring. NAT uzilganda apt update va tashqi curl ishlamasligi
+kutilgan holatdir.
+
+A1 Tarmoq xavfsizligi |
+
+5
+
+TARMOQ XAVFSIZLIGI | A1 | 1-variant | VMware va universitet proksisi
+
+Ikkala VMni sudo poweroff bilan to‘g‘ri o‘chiring. Har biri uchun VM → Snapshot → Take Snapshot orqali A1base nomli snapshotni talabaning o‘zi yaratsin. Snapshotga izoh: “Paketlar o‘rnatilgan, NAT uzilgan, laboratoriya
+IP hali berilmagan”. Keyin ikkala VMni yoqing va 1-bo‘lim bo‘yicha IP manzillarni bering. Snapshot zaxira
+nusxaning o‘rnini bosmaydi; ishchi fayllar lokal diskda qoladi.
+Tayyorgarlik dalillari: P1 — ikkita alohida VM papkasi va VMware oynasi; P2 — har ikkala VMda apt-config
+dump hamda muvaffaqiyatli apt update natijasi; P3 — paketlar/xizmatlar tekshiruvi; P4 — VMnet2 sozlamasi,
+NAT uzilgan holat va ikkala A1-base snapshoti. Bular E1–E8 texnik tahlil dalillaridan alohida saqlanadi.
+
+0 8 Ko‘p uchraydigan xatolar
+Belgi
+
+Tekshirish va tuzatish
+
+Fayl server ochilmaydi
+
+Windows universitet LANiga ulanganini va UNC manzilini tekshiring. So‘ng fileuser hisobini
+kiriting. Ubuntu proksisi Windows SMB ulanishini sozlamaydi.
+
+VM ochilmaydi yoki disk
+topilmaydi
+
+Arxiv to‘liq ochilganini, .vmx va barcha .vmdk bo‘laklari birga ko‘chirilganini tekshiring.
+Lokal papkadagi .vmx ni oching.
+
+APT proksiga ulanolmaydi
+
+NAT Connected holati, IP/default route, ip route get 172.18.1.1 va apt-config dump natijasini
+tekshiring.
+
+Lokal HTTP proksiga ketmoqda
+
+curl --noproxy "*" bilan qayta tekshiring; no_proxy va NO_PROXY ni sozlang.
+
+NAT uzilgach VMlar bir-birini
+ko‘rmaydi
+
+Ikkala ikkinchi adapter ayni VMnet2 ga ulanganini, IP/maskani va 1.3-bo‘limdagi LAB_IF
+qiymatini tekshiring.
+
+Nginx active lekin 80 port
+ko‘rinmaydi
+
+ip route get, ss -lntup va ufw status natijalarini solishtiring. Filtrlanishni dalil sifatida qayd
+eting; UFWni javobni moslashtirish uchun o‘chirmang.
+
+A1 Tarmoq xavfsizligi |
+
+6
+
+TARMOQ XAVFSIZLIGI | A1 | 1-variant | VMware va universitet proksisi
+
+Muhim tushunchalar va baholash modeli
+Tushuncha
+
+Mazmuni
+
+Ushbu ishdagi misol
+
+Aktiv
+
+Tashkilot uchun qiymatga ega resurs yoki jarayon
+
+SRV-1, SSH kirishi, veb-fayllar, loglar
+
+Tahdid
+
+Aktivga zarar yetkazishi mumkin bo‘lgan sabab yoki subyekt
+
+buzilgan ichki host, ruxsatsiz foydalanuvchi,
+xato sozlama
+
+Zaiflik
+
+Tahdid foydalanishi mumkin bo‘lgan kamchilik
+
+ortiqcha ochiq port, kuchsiz autentifikatsiya,
+yangilanmagan paket
+
+Nazorat
+
+Riskni kamaytiradigan tashkiliy yoki texnik chora
+
+segmentatsiya, UFW, SSH kaliti, yangilash,
+loglash
+
+Risk
+
+Tahdid zaiflikdan foydalanib aktivga zarar yetkazishi ehtimoli
+va oqibati
+
+SSH kirishining buzilishi natijasida server
+boshqaruvining yo‘qotilishi
+
+Riskni sonli baholash
+Ushbu variantda risk balli R = E × T formula bilan hisoblanadi. Bu yerda E — tahdid ro‘y berish ehtimolligi (1–5),
+T — oqibatning aktivga ta’siri (1–5). Ball matematik aniqlik emas; talaba har bir bahoni kuzatuv, ssenariy sharti
+yoki mavjud nazorat bilan asoslaydi.
+Ball
+
+Ehtimollik (E)
+
+Baholash mezoni
+
+1
+
+Juda kam
+
+Faqat noodatiy sharoitda; kuchli nazoratlar mavjud
+
+2
+
+Kam
+
+Amalga oshishi mumkin, lekin qo‘shimcha shart yoki yuqori malaka kerak
+
+3
+
+Mumkin
+
+Oddiy ichki tarmoq sharoitida real ssenariy
+
+4
+
+Yuqori
+
+Zaiflik ko‘rinib turibdi va undan foydalanish oson
+
+5
+
+Deyarli muqarrar
+
+Doimiy ta’sir yoki avtomatlashtirilgan urinishlar kutiladi
+
+Ball
+
+Ta’sir (T)
+
+CIA va faoliyatga oqibat
+
+1
+
+Arzimas
+
+Sezilarsiz uzilish; maxfiy ma’lumot va muhim jarayon zarar ko‘rmaydi
+
+2
+
+Kichik
+
+Qisqa lokal noqulaylik; tiklash oson
+
+3
+
+Sezilarli
+
+Bir xizmat yoki bo‘lim ishi buziladi; cheklangan ma’lumot ta’sirlanadi
+
+4
+
+Katta
+
+Muhim xizmat to‘xtaydi yoki maxfiy/yaxlit ma’lumot jiddiy zarar ko‘radi
+
+5
+
+Kritik
+
+Keng ko‘lamli uzilish, boshqaruv yo‘qotilishi yoki og‘ir huquqiy oqibat
+
+Risk balli
+
+Daraja
+
+Qaror
+
+1–4
+
+Past
+
+Qabul qilish yoki reja asosida kuzatish
+
+5–9
+
+O‘rta
+
+Mas’ul va muddat belgilab kamaytirish
+
+10–16
+
+Yuqori
+
+Yaqin muddatda nazorat joriy etish
+
+17–25
+
+Kritik
+
+Faoliyatni cheklash va zudlik bilan choralar ko‘rish
+
+A1 Tarmoq xavfsizligi |
+
+7
+
+TARMOQ XAVFSIZLIGI | A1 | 1-variant | VMware va universitet proksisi
+
+Risk bayonoti qolipi. “Agar [tahdid manbai] [zaiflik]dan foydalansa, [aktiv]ga [oqibat] yuz beradi va
+[maxfiylik/yaxlitlik/mavjudlik] buziladi.” Riskni faqat “port 22 ochiq” kabi kuzatuv bilan tenglashtirmang: ochiq
+port dalil, risk esa ssenariy va oqibatdir.
+
+Misol orqali risk va qoldiq riskni hisoblash
+Faraz qilaylik, curl natijasi ichki portal HTTP orqali ishlayotganini ko‘rsatdi. Tarmoqdagi buzilgan host trafikni
+kuzatishi yoki o‘zgartirishi mumkin. Laboratoriyada haqiqiy maxfiy ma’lumot yo‘q, biroq ishlab turgan ichki portal
+uchun E=3 va T=2 deb asoslash mumkin: R=3×2=6, ya’ni o‘rta risk. TLS joriy etilib, sertifikat tekshiruvi majburiy
+qilinsa ehtimollik E=1 gacha tushadi; T=2 o‘zgarmasa qoldiq risk 2 bo‘ladi. Bu faqat metodik namuna — talaba
+qolgan risklarni o‘z dalili asosida baholaydi.
+
+1 Topshiriqni bajarishga ko‘rsatma
+1 1 Laboratoriya ssenariysi va chegarasi
+SRV-1 o‘quv markazining ichki hujjatlar portalini ifodalaydi. Xodimlar veb-xizmatdan foydalanadi, tizim
+administratori esa serverni faqat SEC-ANALYST boshqaruv stansiyasidan SSH orqali boshqarishi kerak.
+Laboratoriyada sinov ma’lumoti ishlatiladi. Risk bahosi ushbu mo‘ljallangan ish muhitiga nisbatan tuziladi, texnik
+dalillar esa virtual laboratoriyadan olinadi.
+Obyekt
+
+Nom/IP
+
+Vazifa
+
+Kutiladigan tarmoq holati
+
+Tahlilchi VM
+
+SEC-ANALYST —
+192.168.56.10/24
+
+Kuzatuv va dalil yig‘ish
+
+SEC-LAB ga ulangan
+
+Server VM
+
+SRV-1 — 192.168.56.20/24
+
+SSH va ichki HTTP xizmatlari
+
+SEC-LAB ga ulangan
+
+Virtual segment
+
+SEC-LAB — 192.168.56.0/24
+
+Izolyatsiyalangan L2 tarmoq
+
+Default gateway yo‘q
+
+Internet/NAT
+
+Vaqtincha Adapter 1
+
+Faqat dastlabki paket o‘rnatish va
+yangilanish indeksini olish
+
+Nmapdan oldin ikkala VMda
+uziladi
+
+Ruxsat va xavfsizlik chegarasi. Nmap faqat o‘z kompyuteringizdagi SEC-LAB (192.168.56.0/24) va SRV-1 ga
+nisbatan ishlatiladi. Universitetning 172.18.x.x tarmog‘i, 172.18.233.234 fayl serveri, 172.18.1.1 proksisi, Internet
+va boshqa talabalarning VMlari skanerlanmaydi. Bu manzillar fayl olish va paket yuklash uchun berilgan, hujum
+nishoni emas.
+
+1 2 VMware tarmog‘ining tayyorligini tekshirish
+0.4-bo‘limda yaratilgan VMnet2 Host-only tarmog‘ini va 0.7-bo‘limda uzilgan NAT adapterlarini qayta tekshiring.
+Asosiy tahlil paytida faqat SEC-LAB adapteri ulangan bo‘ladi. Laboratoriya interfeysida default gateway va DNS
+berilmaydi. Windows hostining 192.168.56.1 virtual adapteri ko‘rinishi mumkin.
+Platforma
+
+SEC-LAB ni yaratish
+
+VMware Workstation
+
+Talaba yaratgan VMnet2:
+Host-only,
+192.168.56.0/24, DHCP
+o‘chiq
+
+VM adapter sozlamasi
+
+Network Adapter 2 → Custom: VMnet2
+
+Har bir VMda laboratoriya adapteri nomini aniqlang. Quyida ens37 faqat misol sifatida ishlatilgan. ip -br link dagi
+MAC manzilni VMware adapter MAC manzili bilan solishtiring va LAB_IF qiymatiga o‘z laboratoriya
+interfeysingiz nomini yozing. NAT interfeysini tanlamang.
+ip -br link
+ip -br addr
+ip route
+A1 Tarmoq xavfsizligi |
+
+8
+
+TARMOQ XAVFSIZLIGI | A1 | 1-variant | VMware va universitet proksisi
+
+1 3 SEC-ANALYST va SRV-1 ga vaqtinchalik IP manzil berish
+SEC-ANALYST da:
+LAB_IF=ens37
+sudo ip link set "$LAB_IF" up
+sudo ip addr flush dev "$LAB_IF"
+sudo ip addr add 192.168.56.10/24 dev "$LAB_IF"
+ip -br addr show "$LAB_IF"
+
+SRV-1 da:
+LAB_IF=ens37
+sudo ip link set "$LAB_IF" up
+sudo ip addr flush dev "$LAB_IF"
+sudo ip addr add 192.168.56.20/24 dev "$LAB_IF"
+ip -br addr show "$LAB_IF"
+systemctl is-active ssh nginx
+
+SEC-ANALYST dan bazaviy ulanishni tekshiring:
+ping -c 3 192.168.56.20
+ip route get 192.168.56.20
+curl --noproxy "*" -I --max-time 5 http://192.168.56.20
+
+Izoh. ip addr orqali berilgan IP qayta yuklashdan keyin saqlanmaydi. IP buyruqlarini snapshotdan qaytgach yoki
+VMni qayta yoqqach takrorlang. ip route get natijasida SRV-1 ga yo‘l LAB_IF orqali to‘g‘ridan-to‘g‘ri chiqishi
+kerak. Agar eski Netplan yoki NetworkManager profili laboratoriya manzilini qayta yozsa, o‘sha adapterdagi
+avtomatik IPv4 sozlamasini o‘chirib, buyruqlarni takrorlang; NAT profilini o‘zgartirmang.
+
+1 4 Aktivlarni lokal inventarizatsiya qilish
+SRV-1 konsolida quyidagi dalillarni yig‘ing. Natijadagi har bir obyektni aktiv deb qabul qilmang: tashkilot uchun
+qiymati, egasi va vazifasi bo‘lgan resurslarni ajrating. Masalan, “nginx jarayoni”dan tashqari u xizmat qiladigan
+veb-kontent va uning mavjudligi ham alohida aktiv bo‘lishi mumkin.
+hostnamectl
+ip -br addr
+lsblk -o NAME,SIZE,TYPE,MOUNTPOINTS
+free -h
+sudo ss -lntup
+systemctl --type=service --state=running --no-pager
+dpkg-query -W openssh-server nginx ufw
+
+Kamida 5 ta aktivni “3.1. Aktivlar reyestri” jadvaliga kiriting. Har bir aktiv uchun egani (masalan, tizim
+administratori yoki xizmat egasi), dalil manbasini va C/I/A qiymatini 1–5 oralig‘ida yozing. Aktiv ustuvorligini
+max(C, I, A) usulida aniqlang.
+
+1 5 Tarmoqdan host va xizmatlarni aniqlash
+SEC-ANALYST da avval hostlarni aniqlang, keyin faqat SRV-1 manzilidagi TCP xizmatlarni tekshiring. NAT
+uzilganini va 192.168.56.0/24 marshruti aynan laboratoriya interfeysiga tegishli ekanini tekshirmasdan skanerlashni
+boshlamang. Hostning .1 manzili ko‘rinsa, uni kutilgan qo‘shimcha obyekt sifatida qayd eting; chuqur
+skanerlamang.
+nmap -sn 192.168.56.0/24
+nmap -sT -sV --version-light -p 1-1024 192.168.56.20
+curl --noproxy "*" -I --max-time 5 http://192.168.56.20
+
+Agar ping bloklangan bo‘lsa-yu, SRV-1 ishlayotganiga ishonchingiz komil bo‘lsa, faqat belgilangan portlarni host
+discovery siz tekshiring:
+nmap -Pn -sT -sV --version-light -p 22,80 192.168.56.20
+
+Nmap topgan portlarni SRV-1 dagi sudo ss -lntup natijasi bilan solishtiring. Masofadan ko‘rinadigan port bilan
+lokal tinglayotgan soket bir xil tushuncha emas: firewall, bind manzili va marshrutlash sabab farq bo‘lishi mumkin.
+
+A1 Tarmoq xavfsizligi |
+
+9
+
+TARMOQ XAVFSIZLIGI | A1 | 1-variant | VMware va universitet proksisi
+
+1 6 Mavjud himoya nazoratlarini tekshirish
+Quyidagi buyruqlar SRV-1 konsolida bajariladi va holatni o‘qiydi. Chiqishlarni E1, E2, … dalil identifikatori bilan
+saqlang. NAT uzilgandan keyin apt list --upgradable tayyorgarlikdagi apt update saqlagan lokal indeksga tayanadi.
+Indeks yangilangan vaqtni hisobotga yozing; A1 ning tahlil bosqichida nazorat sozlamalarini o‘zgartirmang.
+sudo ufw status verbose
+sudo sshd -T | grep -E \
+'^(permitrootlogin|passwordauthentication|pubkeyauthentication|maxauthtries)'
+sudo ss -lntup
+curl --noproxy "*" -I --max-time 5 http://192.168.56.20
+apt list --upgradable 2>/dev/null
+sudo journalctl -u ssh -n 20 --no-pager
+sudo journalctl -u nginx -n 20 --no-pager
+
+Dalil ID
+
+Tekshiruv
+
+Kuzatiladigan belgi
+
+Risk bilan bog‘lanishi
+
+E1
+
+nmap -sn
+
+Kutilgan va kutilmagan IP
+manzillar
+
+Aktiv inventari to‘liqligi
+
+E2
+
+nmap -sT -sV
+
+Masofadan ochiq port va xizmat
+taxmini
+
+Hujum yuzasi
+
+E3
+
+ss -lntup
+
+Lokal tinglayotgan socket va
+jarayon
+
+E2 natijasini verifikatsiya qilish
+
+E4
+
+ufw status verbose
+
+Faol/nofoal firewall va siyosat
+
+Tarmoq kirishini cheklash
+
+E5
+
+sshd -T
+
+Root, parol va kalit
+autentifikatsiyasi
+
+Ruxsatsiz SSH kirishi
+
+E6
+
+curl -I
+
+HTTP javob va Server sarlavhasi
+
+Shifrlanmagan trafik/axborot
+oshkor bo‘lishi
+
+E7
+
+apt list --upgradable
+
+Yangilanishi kutilayotgan paketlar
+
+Ma’lum zaiflik ehtimoli; CVE
+borligini o‘zi isbotlamaydi
+
+E8
+
+journalctl
+
+Hodisa va xato yozuvlari
+
+Aniqlash va tekshiruv imkoniyati
+
+1 7 Tahdid modelini tuzish
+Har bir muhim aktiv uchun kamida bitta tahdid manbai, kirish yo‘li, zaiflik yoki noaniq nazorat va mumkin bo‘lgan
+oqibatni bog‘lang. “Xaker hujum qiladi” umumiy iborasi yetarli emas. Ssenariy kim, qaysi yo‘l orqali, nimadan
+foydalanib, qaysi aktivga qanday zarar yetkazishini ko‘rsatishi kerak.
+
+• Buzilgan ichki foydalanuvchi kompyuteri: SEC-LAB ga kirish imkoniga ega va ochiq xizmatlarni izlaydi.
+• Ruxsatsiz ichki shaxs: hisob ma’lumotini taxmin qiladi yoki boshqa foydalanuvchining sessiyasidan
+foydalanadi.
+
+• Tizim administratori xatosi: xizmatni barcha interfeyslarda ochib qo‘yadi yoki yangilanishni kechiktiradi.
+• Dasturiy nosozlik: Nginx/SSH xizmatining to‘xtashi portal yoki boshqaruv mavjudligiga ta’sir qiladi.
+• Tarmoqdagi vositachi: HTTP trafikni kuzatadi yoki o‘zgartirishga urinadi.
+Har bir ssenariy uchun dalil mavjud bo‘lmasa, “tasdiqlanmagan faraz” deb belgilang va uni tekshirish usulini
+yozing. Masalan, paket yangilanishi mavjudligi avtomatik ravishda ekspluatatsiya qilinadigan CVE borligini
+anglatmaydi; bu qo‘shimcha tekshiruv talab qiluvchi belgi.
+
+1 8 Boshlang‘ich va qoldiq riskni hisoblash
+Ushbu ishda boshlang‘ich risk — kuzatilgan amaldagi holatdagi, mavjud nazoratlar hisobga olingan risk.
+Qo‘shimcha tavsiya bajarilgandan keyingi qiymat prognoz qoldiq risk deb yuritiladi. Nazoratlar hisobga olinmagan
+A1 Tarmoq xavfsizligi |
+
+10
+
+TARMOQ XAVFSIZLIGI | A1 | 1-variant | VMware va universitet proksisi
+
+ajralmas risk bu jadvalda alohida hisoblanmaydi. A1 da tavsiya etilgan himoya chorasi joriy etilmagani uchun
+qoldiq baho tasdiqlangan natija emas. E yoki T nima sababdan pasayishini izohlang; ikkalasini avtomatik
+kamaytirmang.
+
+• Kamida 6 ta risk bayonoti tuzing va barchasi uchun E, T, R hamda darajani yozing.
+• Eng yuqori 3 ta risk uchun nazorat chorasi, mas’ul, muddat va qoldiq riskni belgilang.
+• Risklardan kamida bittasi maxfiylikka, bittasi yaxlitlikka va bittasi mavjudlikka tegishli bo‘lsin.
+• Risk ballari teng chiqsa, aktiv ustuvorligi va nazoratni joriy etish tezligidan foydalanib navbatni asoslang.
+1 9 Ish yakunida laboratoriyani xavfsiz holatga qaytarish
+Hisobot va skrinshotlarni VMdan tashqaridagi o‘z lokal papkangizga saqlang. So‘ng VMlarni to‘g‘ri o‘chiring.
+Keyingi qayta bajarish zarur bo‘lsa, o‘zingiz yaratgan A1-base snapshotiga qayting; snapshotdan keyingi VM
+o‘zgarishlari yo‘qolishini hisobga oling. NAT uzilgan qolsin. Paket kerak bo‘lganda uni vaqtincha ulang, proksi
+sozlamasini tekshiring va skanerlashdan oldin yana uzing. Laboratoriya IP manzillarini 1.3-bo‘lim bo‘yicha qayta
+bering.
+
+2 1-variant topshirig‘i
+Talaba quyidagi bandlarni ketma-ket bajaradi va har bir muhim qarorni jadval, terminal chiqishi yoki skrinshot
+bilan asoslaydi.
+
+1.Tayyorgarlikni mustaqil bajaring: fayl serverdan VMware obrazini oling, ikkita alohida VM oching, proksi
+orqali paketlarni o‘rnating, VMnet2 yarating, NATni uzing va A1-base snapshotlarini oling. SEC-ANALYST
+hamda SRV-1 ga 192.168.56.10/24 va 192.168.56.20/24 manzillarini bering.
+2.SRV-1 da SSH va Nginx active ekanini tekshiring; SEC-ANALYST dan ping va proksini chetlab o‘tuvchi curl
+bilan ulanishni sinang. Ulanish filtrlangan bo‘lsa, ss, marshrut va UFW orqali sababini qayd eting.
+3.SRV-1 konsolida apparat/OT, tarmoq interfeysi, xizmat, veb-kontent, autentifikatsiya konfiguratsiyasi va loglar
+orasidan kamida 5 ta muhim aktivni inventarizatsiya qiling.
+4.Nmap bilan SEC-LAB hostlarini aniqlang; keyin faqat 192.168.56.20 manzilining 1–1024 TCP portlarini
+tekshiring. Kutilgan va haqiqiy natijani solishtiring.
+5.Nmap topgan xizmatlarni SRV-1 dagi ss natijasi bilan verifikatsiya qiling; farq bo‘lsa, bind manzili, firewall
+yoki host discovery sababini tahlil qiling.
+6.UFW, SSH, HTTP, paket yangilanishlari va jurnal holati bo‘yicha E1–E8 dalillaridan kamida 6 tasini yig‘ing.
+7.Kamida 6 ta tahdid ssenariysi va risk bayonotini tuzing. Har birida aktiv, tahdid manbai, zaiflik/noaniq nazorat,
+oqibat va CIA xususiyatini ko‘rsating.
+8.Har bir risk uchun E va T ni 1–5 bo‘yicha asoslab, R=E×T ni hisoblang va risklarni ustuvorlik tartibida
+joylashtiring.
+9.Eng yuqori 3 ta risk uchun amaldagi nazorat, tavsiya etilgan chora, mas’ul, muddat va qoldiq riskni belgilang.
+10. 6–8 gaplik xulosa yozing: qaysi aktiv eng muhim, qaysi dalil hujum yuzasini ko‘rsatdi, eng ustuvor risk
+nima va nima uchun, qaysi nazorat birinchi joriy etilishi kerak.
+
+A1 Tarmoq xavfsizligi |
+
+11
+
+TARMOQ XAVFSIZLIGI | A1 | 1-variant | VMware va universitet proksisi
+
+3 To‘ldiriladigan natija jadvallari
+3 1 Aktivlar reyestri
+ID
+
+Aktiv
+
+Vazifa/qiymat
+
+Egasi
+
+Dalil
+
+C
+
+I
+
+A
+
+Ustuvorlik
+
+A-01
+A-02
+A-03
+A-04
+A-05
+A-06
+
+3 2 Tarmoq va xizmatlar bo‘yicha dalillar
+Dalil ID
+
+Buyruq/manba
+
+Kuzatuv
+
+Kutilgan holat
+
+E1
+
+nmap -sn
+
+SEC-ANALYST, SRV-1 va
+ehtimol host-only adapter
+
+E2
+
+nmap -sT -sV
+
+SRV-1 da 22/tcp va 80/tcp
+
+E3
+
+ss -lntup
+
+ssh va nginx tinglaydi
+
+E4
+
+ufw status
+
+Holat qayd etiladi, oldindan
+javob berilmaydi
+
+E5
+
+sshd -T
+
+Autentifikatsiya parametrlari
+qayd etiladi
+
+E6
+
+curl -I
+
+HTTP javob sarlavhalari
+
+E7
+
+apt list --upgradable
+
+Yangilanish belgisi
+
+E8
+
+journalctl
+
+Xizmat hodisalari va xatolari
+
+Moslik/izoh
+
+3 3 Tahdid ssenariylari
+T-ID
+
+Aktiv ID
+
+Tahdid manbai
+
+Kirish yo‘li
+
+Zaiflik/noaniq nazorat
+
+Oqibat va CIA
+
+T-01
+T-02
+T-03
+T-04
+
+A1 Tarmoq xavfsizligi |
+
+12
+
+TARMOQ XAVFSIZLIGI | A1 | 1-variant | VMware va universitet proksisi
+
+T-ID
+
+Aktiv ID
+
+Tahdid manbai
+
+Kirish yo‘li
+
+Zaiflik/noaniq nazorat
+
+Oqibat va CIA
+
+T-05
+T-06
+
+3 4 Risk reyestri
+R-ID
+
+Aktiv
+
+Risk bayonoti
+
+Dalil
+
+E
+
+T
+
+R
+
+Daraja/ustuvorlik
+
+R-01
+R-02
+R-03
+R-04
+R-05
+R-06
+
+3 5 Risklarni kamaytirish rejasi
+R-ID
+
+Amaldagi nazorat
+
+Tavsiya etilgan chora
+
+Mas’ul/muddat
+
+Prognoz qoldiq
+E×T=R
+
+Qabul mezoni
+
+4 Topshiriladigan dalillar
+
+• P1–P4 tayyorgarlik dalillari hamda ikkala VMning ip -br addr va ip route get natijalari. Skrinshotlarda NAT
+uzilganligi va laboratoriya adapterlari ko‘rinsin.
+
+• nmap -sn hamda SRV-1 ga qaratilgan nmap -sT -sV natijalari.
+• SRV-1 dagi sudo ss -lntup chiqishi va Nmap bilan solishtirish izohi.
+• UFW, SSH, HTTP, yangilanish va loglardan kamida 6 ta E-ID dalili.
+• Kamida 5 ta aktivdan iborat to‘ldirilgan aktivlar reyestri.
+• Kamida 6 ta tahdid ssenariysi va 6 ta riskdan iborat risk reyestri.
+• Eng yuqori 3 ta risk bo‘yicha qoldiq riskli kamaytirish rejasi.
+• 6–8 gaplik yakuniy xulosa va o‘qituvchi savollariga og‘zaki javob.
+Hisobot dalili. Skrinshotda buyruq va uning natijasi birga ko‘rinsin. Faqat kesilgan qiymat yoki izohsiz skrinshot
+dalil hisoblanmaydi. Har bir skrinshot ostiga VM nomi, buyruq, vaqt va tegishli E-ID yoziladi.
+
+A1 Tarmoq xavfsizligi |
+
+13
+
+TARMOQ XAVFSIZLIGI | A1 | 1-variant | VMware va universitet proksisi
+
+5 Asosiy ishning 80 daqiqalik taqsimoti
+Bosqich
+
+Vaqt
+
+Natija
+
+Tayyorgarlik dalillarini tekshirish va laboratoriya IP
+manzillarini berish
+
+12 daqiqa
+
+P1–P4 mavjud; NAT uzilgan; 2 VM, to‘g‘ri IP va ulanish
+tekshiruvi
+
+Lokal aktivlar inventari
+
+10 daqiqa
+
+kamida 5 ta aktiv
+
+Nmap/curl bilan tarmoq dalillari
+
+12 daqiqa
+
+host, port va xizmatlar
+
+Nazoratlar va loglarni tekshirish
+
+12 daqiqa
+
+kamida 6 ta E-ID
+
+Tahdid ssenariylarini tuzish
+
+10 daqiqa
+
+kamida 6 ta ssenariy
+
+Risk ballari va ustuvorlik
+
+12 daqiqa
+
+to‘liq risk reyestri
+
+Kamaytirish rejasi, xulosa va tekshiruv
+
+12 daqiqa
+
+3 ta qoldiq risk va hisobot
+
+6 Baholash mezoni 10 ball
+Mezon
+
+Ball
+
+Talab
+
+Mustaqil tayyorgarlik va laboratoriya
+chegarasi
+
+1.0
+
+P1–P4, proksi, snapshot, SEC-LAB, NAT uzilganligi va to‘g‘ri IP
+
+Aktivlar inventari
+
+1.5
+
+kamida 5 aktiv, vazifa, ega, dalil va C/I/A bahosi
+
+Host/xizmatlarni aniqlash
+
+1.5
+
+nmap -sn, servis skani va kutilgan–haqiqiy natija
+
+Dalillarni verifikatsiya qilish
+
+1.0
+
+Nmap–ss solishtiruvi va kamida 6 ta E-ID
+
+Tahdid modeli
+
+1.5
+
+kamida 6 aniq tahdid–zaiflik–oqibat ssenariysi
+
+Risk hisob-kitobi
+
+1.5
+
+E/T asoslangan, R to‘g‘ri, daraja va ustuvorlik mantiqli
+
+Kamaytirish va qoldiq risk
+
+1.0
+
+eng yuqori 3 risk uchun chora, mas’ul, muddat va qayta baho
+
+Hisobot va qisqa himoya
+
+1.0
+
+dalillar o‘qilishi, 6–8 gaplik xulosa va savollarga javob
+
+Baholash qoidasi. Faqat Nmap skrinshotini taqdim etish yoki xavflarni umumiy ro‘yxat qilish yetarli emas. To‘liq
+ball uchun “dalil → zaiflik/noaniqlik → tahdid ssenariysi → oqibat → risk balli → nazorat” zanjiri og‘zaki va
+yozma asoslanishi kerak.
+
+A1 Tarmoq xavfsizligi |
+
+14
+
+TARMOQ XAVFSIZLIGI | A1 | 1-variant | VMware va universitet proksisi
+
+7 O‘qituvchi uchun qisqa himoya savollari
+
+• Aktiv bilan dasturiy komponent o‘rtasidagi farq nima? Nginx va veb-kontentni alohida aktiv deb olish qachon
+to‘g‘ri?
+
+• Nmap topgan ochiq port nega o‘z-o‘zidan zaiflik yoki risk hisoblanmaydi?
+• Nmap natijasi bilan ss -lntup natijasi nega farq qilishi mumkin?
+• Tahdid, zaiflik va oqibatni bitta risk bayonotida qanday bog‘ladingiz?
+• Ehtimollik ballini 4, ta’sir ballini 3 deb tanlaganingizni qaysi dalil bilan asoslaysiz?
+• Boshlang‘ich risk va qoldiq risk o‘rtasidagi farq nima?
+• UFW faol bo‘lsa ham risk nega nolga tushmaydi?
+• apt list --upgradable chiqishi ekspluatatsiya qilinadigan zaiflik borligini to‘liq isbotlaydimi?
+• Qaysi risk maxfiylikka, qaysisi yaxlitlikka, qaysisi mavjudlikka eng ko‘p ta’sir qiladi?
+• Bir xil ball olgan ikkita riskdan qaysi birini birinchi kamaytirishni qanday tanlaysiz?
+• Nega terminaldagi export sozlamasidan tashqari APT uchun 99proxy fayli ham kerak?
+• curl --noproxy "*" nimani o‘zgartiradi va nega NAT Nmapdan oldin uziladi?
+• Fayl server hisobi bilan Ubuntu hisobi o‘rtasidagi farq nima?
+• A1-base snapshotini kim va qaysi bosqichda yaratadi?
+
+8 Talaba uchun yakuniy qayd
+Ushbu ishning asosiy natijasi skaner chiqishi emas, balki tekshiriladigan dalilga tayangan risk qaroridir. Har bir
+kuzatuvni kontekst bilan izohlang: xizmat nima uchun ochiq, kim undan foydalanishi kerak, qanday nazorat mavjud
+va nosozlik tashkilotga qanday ta’sir qiladi. Tayyor javobni ko‘chirish o‘rniga aynan o‘z VMlaringizdagi holatni
+qayd eting.
+Band
+
+Qayd
+
+Talaba F.I.Sh. / Guruh
+
+________________________________ / __________
+
+Bajarilgan sana
+
+____ / ____ / 20____
+
+Olingan ball
+
+________ / 10
+
+O‘qituvchi imzosi
+
+________________________________
+
+Texnik ma’lumot manbalari
+Universitet manzillari, fayl server rekvizitlari va 1–3-rasmlar foydalanuvchi taqdim etgan ma’lumotlarga
+asoslangan. Obrazning ichki hisobi va paketlar holati oldindan taxmin qilinmagan.
+Ubuntu APT konfiguratsiyasi
+curl proksi va noproxy parametrlari
+
+A1 Tarmoq xavfsizligi |
+
+15
+
+
