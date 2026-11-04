@@ -1,4 +1,4 @@
-# A2. TLS, SSH va IPsec Protokollarini Sozlash
+  # A2. TLS, SSH va IPsec Protokollarini Sozlash
 ## Ikki Ubuntu Server O‘rtasida Ko‘p Qatlamli Himoyalangan Aloqa Kanalini Yaratish
 ### To‘liq Amaliy Laboratoriya Qo‘llanmasi va Tahliliy Hisobot
 

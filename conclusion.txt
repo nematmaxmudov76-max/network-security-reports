@@ -1,0 +1,9 @@
+description.md va A1_Tarmoq_xavsizligi ...pdf fayllarda vazifalarni bajarish
+  jarayonida: 1* vazifani asosiy bajarishdan maqsad 2* vazifani bajarishda
+  qanday tashqi kutubxonalar, qo'shimcha tool lardan foydalandi? 3* vazifani
+  bajarish jarayonida o'sha qo'shimcha kutubxona/tool lar yordamida ketma ket
+  qanday cli komanda buyruqlar berilib borildi va +qanday maqsadda foydalandi
+  4* ertaga qo'shimcha o'zim self study qilayotganimda bu bajarilgan ishlarimiz
+  qayssi darajaga yetganimda o'rganishim kerak bo'ladi? 5*o'zingni men uchun
+  qo'shimcha maslahatlaring...              va xulosa javoblarni
+  "conclusion.md" faylga yozib ber

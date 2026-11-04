@@ -1,4 +1,4 @@
-# A1: Tarmoq aktivlari, tahdidlar va risklarni tahlil qilish
+'# A1: Tarmoq aktivlari, tahdidlar va risklarni tahlil qilish
 **Fan:** Tarmoq xavfsizligi (5-semestr) • **Variant:** 1-variant  
 **Mavzu:** Tayyor VMware obrazlari asosida aktivlar inventari va risk reyestrini tuzish  
 **Muhit:** **Ubuntu Linux Host** $\rightarrow$ **VMware Workstation for Linux** $\rightarrow$ **2 ta Ubuntu Server VM**  
