@@ -261,7 +261,8 @@ sudo apt update
 sudo apt install -y openssh-client openssl curl strongswan tcpdump iproute2
 ```
 * `sudo apt update`: Paketlar ombori indekslarini yangilaydi.
-* `openssh-client`: SSH orqali ulanish va `ssh-keygen`, `ssh-copy-id`, `scp` vositalarini taqdim etadi.
+* `openssh-client`: SSH orqali ulanish va `ssh-keygen`, `ssh-copy-id`, `scp` vos
+italarini taqdim etadi.
 * `openssl`: Kriptografik operatsiyalar, sertifikat tekshirish uchun.
 * `curl`: HTTP/HTTPS so‘rovlarini terminaldan yuborish vositasi.
 * `strongswan`: IPsec IKEv2 demoni.
@@ -860,59 +861,59 @@ Mashg‘ulot tugagach, VMlarni to‘xtatib (`sudo poweroff`), o‘qituvchi ko‘
 
 #### 9.1. Laboratoriya va xizmatlar holati jadvali (3.1-jadval)
 
-| Obyekt | Interfeys | IP manzil / Niqob | Xizmatlar / Portlar | Bazaviy holat |
-| :--- | :--- | :--- | :--- | :--- |
-| **CLIENT-1** | `ens37` (yoki `LAB_IF`) | `192.168.57.10/24` | OpenSSH client, curl, strongSwan initiator | UP, Gateway/DNS yo‘q |
-| **SRV-1** | `ens37` (yoki `LAB_IF`) | `192.168.57.20/24` | 22/tcp (SSH), 443/tcp (HTTPS), UDP 500/4500 (IKE), IP 50 (ESP) | UP, Gateway/DNS yo‘q |
-| **A2-LAB** | VMware `vmnet2` | `192.168.57.0/24` | Izolyatsiyalangan L2/L3 virtual tarmoq segmenti | DHCP yo‘q, Host-only |
+| Obyekt       | Interfeys               | IP manzil / Niqob  | Xizmatlar / Portlar                                            | Bazaviy holat        |
+| :----------- | :---------------------- | :----------------- | :------------------------------------------------------------- | :------------------- |
+| **CLIENT-1** | `ens37` (yoki `LAB_IF`) | `192.168.57.10/24` | OpenSSH client, curl, strongSwan initiator                     | UP, Gateway/DNS yo‘q |
+| **SRV-1**    | `ens37` (yoki `LAB_IF`) | `192.168.57.20/24` | 22/tcp (SSH), 443/tcp (HTTPS), UDP 500/4500 (IKE), IP 50 (ESP) | UP, Gateway/DNS yo‘q |
+| **A2-LAB**   | VMware `vmnet2`         | `192.168.57.0/24`  | Izolyatsiyalangan L2/L3 virtual tarmoq segmenti                | DHCP yo‘q, Host-only |
 
 #### 9.2. SSH sozlamasi va sinovlari jadvali (3.2-jadval)
 
-| Tekshiruv bosqichi | Kutiladigan natija | Haqiqiy natija | Holati |
-| :--- | :--- | :--- | :--- |
-| `sshd -t` | Sintaksis xatoliksiz tugaydi | Chiqish bo‘sh (kod: 0) | Muvaffaqiyatli |
-| `PubkeyAuthentication` | `yes` | `pubkeyauthentication yes` | Muvaffaqiyatli |
-| `PasswordAuthentication`| `no` | `passwordauthentication no` | Muvaffaqiyatli |
-| `PermitRootLogin` | `no` | `permitrootlogin no` | Muvaffaqiyatli |
-| Kalitli kirish sinovi | `SSH_KEY_OK` qaytadi | `SSH_KEY_OK` | Muvaffaqiyatli |
-| Password-only urinish | `Permission denied (publickey)` | `Permission denied (publickey)` | Muvaffaqiyatli (Nazoratli rad) |
+| Tekshiruv bosqichi       | Kutiladigan natija              | Haqiqiy natija                  | Holati                         |
+| :----------------------- | :------------------------------ | :------------------------------ | :----------------------------- |
+| `sshd -t`                | Sintaksis xatoliksiz tugaydi    | Chiqish bo‘sh (kod: 0)          | Muvaffaqiyatli                 |
+| `PubkeyAuthentication`   | `yes`                           | `pubkeyauthentication yes`      | Muvaffaqiyatli                 |
+| `PasswordAuthentication` | `no`                            | `passwordauthentication no`     | Muvaffaqiyatli                 |
+| `PermitRootLogin`        | `no`                            | `permitrootlogin no`            | Muvaffaqiyatli                 |
+| Kalitli kirish sinovi    | `SSH_KEY_OK` qaytadi            | `SSH_KEY_OK`                    | Muvaffaqiyatli                 |
+| Password-only urinish    | `Permission denied (publickey)` | `Permission denied (publickey)` | Muvaffaqiyatli (Nazoratli rad) |
 
 #### 9.3. TLS sertifikati va HTTPS sinovlari jadvali (3.3-jadval)
 
-| Maydon / Sinov turi | Kutiladigan qiymat | Haqiqiy qiymat | Holati |
-| :--- | :--- | :--- | :--- |
-| **Subject** | `CN=srv1.a2.lab` | `subject=C=UZ, O=A2 Lab, CN=srv1.a2.lab` | To‘g‘ri |
-| **Issuer** | `CN=A2 Lab CA` | `issuer=C=UZ, O=A2 Lab, CN=A2 Lab CA` | To‘g‘ri |
-| **SAN (Subject Alt Name)**| `DNS:srv1.a2.lab, IP:192.168.57.20` | `DNS:srv1.a2.lab, IP:192.168.57.20` | To‘g‘ri |
-| **Amal qilish muddati** | 120 kun | `notBefore=... notAfter=... (120 days)` | To‘g‘ri |
-| `openssl verify` | `OK` | `srv1.crt: OK` | Muvaffaqiyatli |
-| To‘g‘ri host (`srv1.a2.lab`) | `200 OK`, `Verify return code: 0` | `A2 TLS service is working`, code 0 | Muvaffaqiyatli |
-| Noto‘g‘ri host (`wrong.a2.lab`) | Sertifikat nomi mos emas (Xato 60) | `SSL: certificate subject name does not match` | Muvaffaqiyatli (Nazoratli rad) |
+| Maydon / Sinov turi             | Kutiladigan qiymat                  | Haqiqiy qiymat                                 | Holati                         |
+| :------------------------------ | :---------------------------------- | :--------------------------------------------- | :----------------------------- |
+| **Subject**                     | `CN=srv1.a2.lab`                    | `subject=C=UZ, O=A2 Lab, CN=srv1.a2.lab`       | To‘g‘ri                        |
+| **Issuer**                      | `CN=A2 Lab CA`                      | `issuer=C=UZ, O=A2 Lab, CN=A2 Lab CA`          | To‘g‘ri                        |
+| **SAN (Subject Alt Name)**      | `DNS:srv1.a2.lab, IP:192.168.57.20` | `DNS:srv1.a2.lab, IP:192.168.57.20`            | To‘g‘ri                        |
+| **Amal qilish muddati**         | 120 kun                             | `notBefore=... notAfter=... (120 days)`        | To‘g‘ri                        |
+| `openssl verify`                | `OK`                                | `srv1.crt: OK`                                 | Muvaffaqiyatli                 |
+| To‘g‘ri host (`srv1.a2.lab`)    | `200 OK`, `Verify return code: 0`   | `A2 TLS service is working`, code 0            | Muvaffaqiyatli                 |
+| Noto‘g‘ri host (`wrong.a2.lab`) | Sertifikat nomi mos emas (Xato 60)  | `SSL: certificate subject name does not match` | Muvaffaqiyatli (Nazoratli rad) |
 
 #### 9.4. IPsec SA va XFRM tekshiruvi jadvali (3.4-jadval)
 
-| Tekshiruv turi | Kutiladigan natija | Haqiqiy kuzatuv | Holati |
-| :--- | :--- | :--- | :--- |
-| **IKE SA** | `ESTABLISHED` | `1 up, 0 connecting, a2-host-to-host[1]: ESTABLISHED` | Faol |
-| **CHILD SA** | `INSTALLED, TRANSPORT` | `a2-host-to-host{1}: INSTALLED, TUNNEL=no (TRANSPORT)`| Faol |
-| **Peer / Selektorlar** | `192.168.57.10 === 192.168.57.20` | `192.168.57.10/32 === 192.168.57.20/32` | To‘g‘ri |
-| **IKE algoritmlari** | `AES-256 / SHA-256 / MODP-2048` | `AES_CBC_256/HMAC_SHA2_256_128/MODP_2048` | Mos |
-| **ESP algoritmlari** | `AES-256 / SHA-256` | `AES_CBC_256/HMAC_SHA2_256_128` | Mos |
-| `ip xfrm state` | Kiruvchi va chiquvchi ESP SAD | 2 ta ESP state yozuvi mavjud (in/out SPI) | To‘g‘ri |
-| `ip xfrm policy` | in/out transport siyosatlari | Siyosatlar yadroga yuklangan (`mode transport`) | To‘g‘ri |
-| `tcpdump` tahlili | ICMP ochiq ko‘rinmaydi, faqat ESP | `IP ... > ...: ESP(spi=0x...,seq=...)` | Tasdiqlandi |
+| Tekshiruv turi         | Kutiladigan natija                | Haqiqiy kuzatuv                                        | Holati      |
+| :--------------------- | :-------------------------------- | :----------------------------------------------------- | :---------- |
+| **IKE SA**             | `ESTABLISHED`                     | `1 up, 0 connecting, a2-host-to-host[1]: ESTABLISHED`  | Faol        |
+| **CHILD SA**           | `INSTALLED, TRANSPORT`            | `a2-host-to-host{1}: INSTALLED, TUNNEL=no (TRANSPORT)` | Faol        |
+| **Peer / Selektorlar** | `192.168.57.10 === 192.168.57.20` | `192.168.57.10/32 === 192.168.57.20/32`                | To‘g‘ri     |
+| **IKE algoritmlari**   | `AES-256 / SHA-256 / MODP-2048`   | `AES_CBC_256/HMAC_SHA2_256_128/MODP_2048`              | Mos         |
+| **ESP algoritmlari**   | `AES-256 / SHA-256`               | `AES_CBC_256/HMAC_SHA2_256_128`                        | Mos         |
+| `ip xfrm state`        | Kiruvchi va chiquvchi ESP SAD     | 2 ta ESP state yozuvi mavjud (in/out SPI)              | To‘g‘ri     |
+| `ip xfrm policy`       | in/out transport siyosatlari      | Siyosatlar yadroga yuklangan (`mode transport`)        | To‘g‘ri     |
+| `tcpdump` tahlili      | ICMP ochiq ko‘rinmaydi, faqat ESP | `IP ... > ...: ESP(spi=0x...,seq=...)`                 | Tasdiqlandi |
 
 #### 9.5. Integratsion va nazoratli salbiy sinovlar jadvali (3.5-jadval)
 
-| Test ID | Ssenariy tavsifi | Kutiladigan natija | Haqiqiy natija | Xulosa va Izoh |
-| :---: | :--- | :--- | :--- | :--- |
-| **T1** | SSH kalitli kirish | Muvaffaqiyatli kirish | `SSH_KEY_OK` | ED25519 kaliti to‘g‘ri tekshirildi |
-| **T2** | SSH parolli urinish | Ulanish rad etilishi | `Permission denied` | Parol orqali kirish bloklangan |
-| **T3** | TLS to‘g‘ri SAN | 200 OK va Verify OK | Sahifa ochildi | Lokal CA va SAN to‘liq tasdiqlandi |
-| **T4** | TLS noto‘g‘ri host | Sertifikat xatosi | `curl: (60) mismatch`| MITM hujumidan himoya ishlamoqda |
-| **T5** | IPsec to‘g‘ri PSK | SA o‘rnatiladi | `INSTALLED` | IKEv2 muvaffaqiyatli kelishildi |
-| **T6** | IPsec noto‘g‘ri PSK | Autentifikatsiya xatosi | `AUTHENTICATION_FAILED`| Begona ulanish rad etildi |
-| **T7** | Tiklashdan so‘ng SSH+HTTPS | Ikkisi ham ishlaydi | Ikkisi ham muvaffaqiyatli| IPsec ustida L7 protokollari shaffof ishlaydi |
+| Test ID | Ssenariy tavsifi           | Kutiladigan natija      | Haqiqiy natija            | Xulosa va Izoh                                |
+| :-----: | :------------------------- | :---------------------- | :------------------------ | :-------------------------------------------- |
+| **T1**  | SSH kalitli kirish         | Muvaffaqiyatli kirish   | `SSH_KEY_OK`              | ED25519 kaliti to‘g‘ri tekshirildi            |
+| **T2**  | SSH parolli urinish        | Ulanish rad etilishi    | `Permission denied`       | Parol orqali kirish bloklangan                |
+| **T3**  | TLS to‘g‘ri SAN            | 200 OK va Verify OK     | Sahifa ochildi            | Lokal CA va SAN to‘liq tasdiqlandi            |
+| **T4**  | TLS noto‘g‘ri host         | Sertifikat xatosi       | `curl: (60) mismatch`     | MITM hujumidan himoya ishlamoqda              |
+| **T5**  | IPsec to‘g‘ri PSK          | SA o‘rnatiladi          | `INSTALLED`               | IKEv2 muvaffaqiyatli kelishildi               |
+| **T6**  | IPsec noto‘g‘ri PSK        | Autentifikatsiya xatosi | `AUTHENTICATION_FAILED`   | Begona ulanish rad etildi                     |
+| **T7**  | Tiklashdan so‘ng SSH+HTTPS | Ikkisi ham ishlaydi     | Ikkisi ham muvaffaqiyatli | IPsec ustida L7 protokollari shaffof ishlaydi |
 
 ---
 

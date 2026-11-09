@@ -1,0 +1,570 @@
+A2: Ikki Ubuntu Server O‘rtasida Ko‘p Qatlamli Himoyalangan Aloqa Kanalini Yaratish
+Laboratoriya ishining asosiy maqsadi:Ushbu laboratoriya ishining bosh maqsadi — kompyuter tarmoqlarida axborot xavfsizligini ta’minlashning eng muhim ustunlari bo‘lgan SSH (Secure Shell), TLS (Transport Layer Security) va IPsec (Internet Protocol Security) kriptografik protokollarini real Linux muhitida amaliy sozlash, ularning o‘zaro ishlash mexanizmini va himoya qamrovini tadqiq qilishdan iborat.
+Amaliyot davomida talaba:
+OpenSSH xizmatini parolsiz, zamonaviy elliptik egri chiziqqa asoslangan ED25519 asimmetrik kalitlari asosida sozlaydi va server xavfsizligini kuchaytiradi (hardening).
+O‘zining shaxsiy Lokal Sertifikatlash Markazini (Local CA) quradi, X.509 v3 standartidagi zamonaviy SAN (Subject Alternative Name) maydoniga ega raqamli sertifikat ishlab chiqadi va Nginx veb-serverida faqat xavfsiz TLS 1.2 / TLS 1.3 protokollarini yoqadi.
+Linux yadrosining XFRM moduli va strongSwan dasturiy ta’minoti yordamida ikkita host o‘rtasida IKEv2 va ESP (Encapsulating Security Payload) transport rejimiga asoslangan IPsec tunnelini o‘rnatadi.
+Har bir protokolning to‘g‘ri ishlashini ijobiy (positive) sinovlar bilan tasdiqlaydi hamda ataylab kiritilgan xatoliklar orqali nazoratli salbiy (controlled negative) sinovlar o‘tkazib, xavfsizlik mexanizmlarining rad etish qobiliyatini tekshiradi.
+1-bosqich: Virtual tarmoq va IP manzillarni sozlash (A2-LAB: 192.168.57.0/24)
+1-qadam: Asosiy (Host) joriy Ubuntu kompyuterimdan vmnet1 ni sozlab oldim va unga ikkita serverni ulansh uchun yagona ulanish ip manzini  berdim(1-rasm)
+1-rasm.
+2-qadam: websrv serverida statik IP sozlash
+Vmware dagi Web-server nomli ubuntu serverda kerakli kutubxonalar o’rnatigach Settings→ Network and Adapter → Host-only rejimi yoqiladi va joriy Noutbokdagi virtual tarmoq kartasi bo’lgan “vmnet1” ga ulanadi(2-rasm)
+2-rasm.
+3-qadam: LAN-CLIENT serverida statik IP sozlash
+Vmware dagi Web-server nomli ubuntu serverda kerakli kutubxonalar o’rnatigach Settings→ Network and Adapter → Host-only rejimi yoqiladi va joriy Noutbokdagi virtual tarmoq kartasi bo’lgan “vmnet1” ga ulanadi(2-rasm)
+2-rasm.
+2-bosqich: SSH ni ED25519 kaliti bilan sozlash va xavfsizlashtirish (Hardening)
+1-QADAM: LAN-CLIENT da ED25519 kalit juftligini yaratish va serverga ko‘chirish
+Bu bosqichda:
+lan-client da yangi ED25519 kalit juftligi generatsiya qilinadi.
+Ochiq kalit websrv serveriga nusxalanadi.
+WEBSRV da parolli kirish butunlay o‘chirilib, faqat kalit bilan kirish majburiy qilinadi (Hardening).
+SSH katalogini tayyorlash va kalit juftligini yaratish:
+Bash
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+ssh-keygen -t ed25519 -a 64 -f ~/.ssh/a2_ed25519
+Tekshirish: ls -l ~/.ssh/a2_ed25519* buyrug‘ini bering. Ikkita fayl — a2_ed25519 (maxfiy kalit) va a2_ed25519.pub (ochiq kalit) yaratilgan bo‘lishi lozim.
+Ochiq kalitni websrv serveriga ko‘chirish: server3_web_srv foydalanuvchisi
+Bash
+ssh-copy-id -i ~/.ssh/a2_ed25519.pub server3_web_srv@192.168.57.20
+(Server foydalanuvchisining parolini kiriting).
+Tekshirish: Number of key(s) added: 1 xabari chiqishi kerak.(3-rasm)
+3-rasm.
+2-QADAM: WEBSRV da SSH Hardening (Xavfsizlikni kuchaytirish)
+Ushbu qism websrv (192.168.57.20) terminalida bajariladi.
+websrv terminaliga o‘tamiz. Avval mavjud sozlamaning zaxira nusxasini olamiz:
+sudo cp -a /etc/ssh/sshd_config /etc/ssh/sshd_config.a2-backup
+cp -a: Faylni barcha egalik huquqlari, atributlari va vaqt tamg‘alari bilan arxiv rejimida nusxalaydi.
+Endi /etc/ssh/sshd_config.d/ katalogida yangi drop-in konfiguratsiya fayli yaratamiz:
+sudo nano /etc/ssh/sshd_config.d/99-a2-hardening.conf
+Fayl ichiga quyidagi qatorlarni yozamiz:
+PermitRootLogin no
+PubkeyAuthentication yes
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+MaxAuthTries 3
+AllowUsers server3_web_srv
+AllowUsers server3_web_srv bu degani serverga faqatgina server3_web_srv hisobidan kirishga ruxsat beradi.
+Sozlama sintaksisini tekshiramiz va SSH xizmatini qayta yuklaymiz:(4-rasm)
+sudo sshd -t
+sudo sshd -T | grep -E '^(permitrootlogin|pubkeyauthentication|passwordauthentication|kbdinteractiveauthentication|maxauthtries|allowusers)'
+sudo systemctl reload ssh
+!!endi bundan keyingi amallarda SSH orqali joriy noutbokdagi ubuntu operatsion sistemaga ulab mashqlarni bajaramiz, bu bizga vazifalarni bajarishda qulaylik va tezlik beradi!!
+4-rasm
+3-QADAM: Ijobiy va nazoratli salbiy SSH sinovlari
+LAN-CLIENT terminaliga o‘tib, ikkita sinov o‘tkazamiz:
+Ijobiy sinov (Kalit bilan muvaffaqiyatli kirish):
+ssh -i ~/.ssh/a2_ed25519 server3_web_srv@192.168.57.20 'echo SSH_KEY_OK'
+Kutiladigan natija: Server konsolida SSH_KEY_OK yozuvi chiqadi.
+Nazoratli salbiy sinov (Parol orqali kirish urinishi):
+ssh -o PubkeyAuthentication=no -o PreferredAuthentications=password server3_web_srv@192.168.57.20
+Natijada Permission denied (publickey) yozuvi chiqsa, parolli kirish to‘liq bloklangani va faqat kalit bilan ulanish kafolatlangani isbotlanadi.
+5-rasm
+NOSOZLIKNI TIKLASH (ROLLBACK):
+Agar biror xatolik tufayli SSH kalit bilan kirmay qolsa, websrv konsolida:
+sudo rm -f /etc/ssh/sshd_config.d/99-a2-hardening.conf
+sudo cp -a /etc/ssh/sshd_config.a2-backup /etc/ssh/sshd_config
+sudo systemctl restart ssh
+buyruqlari orqali avvalgi holatga qaytariladi.
+3-bosqich: Lokal CA va TLS server sertifikatini yaratish (SAN bilan)
+Bosqichning mohiyati va mantiqiy zanjiri
+Ildiz CA (Root CA): O‘zining maxfiy kaliti (ca.key) va o‘zini o‘zi imzolagan sertifikatiga (ca.crt) ega bo‘ladi. Mijoz (LAN-CLIENT) ushbu ca.crt ga ishonsa, ushbu CA imzolagan barcha keyingi sertifikatlarni ham avtomatik ishonchli deb biladi.
+Server kaliti va so‘rovi (CSR): Veb-server o‘zining shaxsiy kalitini (srv1.key) va imzolash uchun arizasini (srv1.csr) tayyorlaydi.
+SAN kengaytmasi (srv1.ext): Zamonaviy brauzerlar va curl vositasi faqat CN maydoniga ishonmaydi; sertifikat ichida aniq domen (srv1.a2.lab) va IP manzil (192.168.57.20) ko‘rsatilgan SAN bloki bo‘lishi shart.
+Imzolash: CA o‘zining muhri bilan server arizasini tasdiqlab, tayyor srv1.crt ni chiqaradi
+Bajariladigan amallar (websrv terminalida)
+1-qadam: Katalog tayyorlash va Ildiz CA yaratish
+Xavfsiz, faqat root o‘qiy oladigan katalog ochamiz va CA kaliti bilan sertifikatini generatsiya qilamiz:
+sudo install -d -m 700 /etc/a2-tls
+cd /etc/a2-tls
+sudo openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out ca.key
+sudo openssl req -x509 -new -sha256 -days 365 -key ca.key -out ca.crt -subj "/C=UZ/O=A2 Lab/CN=A2 Lab CA"
+davomidan Server maxfiy kaliti va so‘rovi (CSR) ni yaratamiz
+Endi Nginx veb-serveri foydalanadigan kalit va arizani generatsiya qilamiz: (6-rasm)
+Bash
+cd /etc/a2-tls
+sudo openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out srv1.key
+sudo openssl req -new -key srv1.key -out srv1.csr -subj "/C=UZ/O=A2 Lab/CN=srv1.a2.lab"
+6-rasm.
+3-qadam: X.509 v3 SAN kengaytma faylini tayyorlash
+Sertifikatga zamonaviy talablarga mos SAN maydonini kiritish uchun konfiguratsiya fayli ochamiz:
+sudo nano /etc/a2-tls/srv1.ext
+Fayl ichiga quyidagi 4 ta qatorni to‘liq joylashtiramiz:(7-rasm)
+basicConstraintsCA:FALSE
+keyUsage=digitalSignature,keyEncipherment
+extendedKeyUsage=serverAuth
+subjectAltName=DNS:srv1.a2.lab,IP:192.168.57.20
+7-rasm. Faylga yozildi va cat yordamida o’qildi
+4-qadam: Server sertifikatini CA bilan imzolash va ruxsatlarni sozlash
+CA maxfiy kalitidan foydalanib server so‘rovini haqiqiy sertifikatga aylantiramiz va ommaviy CA sertifikatini uy katalogingizga nusxalaymiz:
+cd /etc/a2-tls
+sudo openssl x509 -req -in srv1.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out srv1.crt -days 120 -sha256 -extfile srv1.ext
+sudo chmod 600 ca.key srv1.key
+sudo chmod 644 ca.crt srv1.crt
+sudo install -o server3_web_srv -g server3_web_srv -m 644 ca.crt /home/server3_web_srv/a2-ca.crt
+Tekshirish: ls -l /home/server3_web_srv/a2-ca.crt buyrug‘i fayl muvaffaqiyatli joylashtirilganini ko‘rsatishi kerak.(8-rasm)
+8-rasm
+5-qadam: Sertifikat va ishonch zanjirini tekshirish
+Yaratilgan sertifikatning to‘g‘riligini tasdiqlash uchun 2 ta nazorat buyrug‘ini bajaramiz:
+Ishonch zanjiri tekshiruvi:
+sudo openssl verify -CAfile /etc/a2-tls/ca.crt /etc/a2-tls/srv1.crt
+Kutiladigan natija: Qat'iy ravishda srv1.crt: OK chiqishi shart!
+Sertifikat maydonlari va SAN tekshiruvi:
+sudo openssl x509 -in /etc/a2-tls/srv1.crt -noout -subject -issuer -dates -ext subjectAltName
+Kutiladigan natija:(9-rasm)
+subject=C=UZ, O=A2 Lab, CN=srv1.a2.lab
+issuer=C=UZ, O=A2 Lab, CN=A2 Lab CA
+notBefore=...
+notAfter=...
+X509v3 Subject Alternative Name:
+DNS:srv1.a2.lab, IP Address:192.168.57.20
+Sertifikat A2 Lab CA tomonidan berilgani va SAN qatorida domen bilan IP ko‘rsatilgani tasdiqlanadi.
+9-rasm
+4-bosqich: Nginx da TLS 1.2/1.3 HTTPS xizmatini ishga tushirish va sinovlar
+Jarayon 3 qismdan iborat:
+websrv: Nginx HTTPS virtual hostini sozlash va xizmatni yoqish.
+LAN-CLIENT: CA sertifikatini qabul qilish va DNS lokal nomini (/etc/hosts) sozlash.
+Sinovlar: Sertifikat ishonchliligi, SAN mosligi hamda TLS 1.2/1.3 va eskirgan protokollar rad etilishini tekshirish.
+1-qism: websrv da Nginx HTTPS xizmatini sozlash
+Barcha amallar websrv (192.168.57.20) terminalida bajariladi:
+Laboratoriya uchun test veb-sahifasini yaratish:
+sudo mkdir -p /var/www/a2-lab
+echo "<h1>A2 Lab: HTTPS TLS 1.2/1.3 ishladi!</h1>" | sudo tee /var/www/a2-lab/index.html
+sudo chown -R www-data:www-data /var/www/a2-lab
+Nginx uchun xavfsiz TLS konfiguratsiya faylini ochish:
+sudo nano /etc/nginx/sites-available/a2-tls.conf
+Fayl ichiga quyidagi sozlamalarni to‘liq joylashtiring:
+server {
+listen 443 ssl;
+server_name srv1.a2.lab 192.168.57.20;
+root /var/www/a2-lab;
+index index.html;
+ssl_certificate /etc/a2-tls/srv1.crt;
+ssl_certificate_key /etc/a2-tls/srv1.key;
+# Faqat TLS 1.2 va TLS 1.3 ga ruxsat berish
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_ciphers HIGH:!aNULL:!MD5:!3DES;
+ssl_prefer_server_ciphers on;
+ssl_session_cache shared:SSL:10m;
+ssl_session_timeout 10m;
+location / {
+try_files $uri $uri/ =404;
+}
+}
+Saytni faollashtirish va sintaksisni tekshirish:
+sudo ln -sf /etc/nginx/sites-available/a2-tls.conf /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+Tekshirish: sudo nginx -t buyrug‘i syntax is ok va test is successful qaytarishi shart. systemctl status nginx xizmati esa yashil active (running) holatida bo‘lishi lozim.(10-rasm)
+10-rasm
+2-qism: LAN-CLIENT ga CA sertifikatini ko‘chirish va tayyorlash
+Endi LAN-CLIENT (LAN-CLIENT: 192.168.57.10) terminaliga o‘ting:
+Lokal nomni (srv1.a2.lab) biriktirish: Mijoz sertifikatdagi SAN domenini taniy olishi uchun /etc/hosts ga yozamiz:
+echo "192.168.57.20 srv1.a2.lab" | sudo tee -a /etc/hosts
+Tekshirish: ping -c 2 srv1.a2.lab buyrug‘i 192.168.57.20 ga yo‘qotishsiz borishi kerak.
+Ildiz CA sertifikatini WEBSRV dan yuklab olish: Oldingi bosqichda yaratilgan a2-ed25519 kaliti orqali nusxalaymiz:
+scp -i~/.ssh/a2_ed25519 server3_web_srv@192.168.57.20:/home/server3_web_srv/a2-ca.crt ~/a2-ca.crt
+Tekshirish: ls -l ~/a2-ca.crt buyrug‘ida CA sertifikat fayli paydo bo‘lishi kerak.(11-rasm)
+11-rasm.
+3-qism: Amaliy sinovlar va xavfsizlikni tekshirish
+Sinovlar LAN-CLIENT terminalidan bajariladi:(12-rasm)
+Nazoratli salbiy sinov (Ishonchsiz CA rad etilishi): Mijoz CA sertifikatini ko‘rsatmasdan so‘rov beradi:
+curl -I https://srv1.a2.lab
+Kutiladigan natija: curl: (60) SSL certificate problem: unable to get local issuer certificate xatosi chiqadi. Bu mijoz notanish yoki tasdiqlanmagan sertifikatlarni qabul qilmayotganini isbotlaydi.
+Ijobiy sinov (Lokal CA orqali muvaffaqiyatli HTTPS): Yuklab olingan CA sertifikatini ko‘rsatib so‘rov yuboramiz:
+curl --cacert ~/a2-ca.crt https://srv1.a2.lab
+Kutiladigan natija: Konsolda <h1>A2 Lab: HTTPS TLS 1.2/1.3 ishladi!</h1> matni chiqadi.
+TLS protokollari sinovi (OpenSSL orqali):
+TLS 1.2 tekshiruvi:
+openssl s_client -connect srv1.a2.lab:443 -tls1_2 -CAfile ~/a2-ca.crt < /dev/null | grep -E 'Protocol|Cipher|Verify return code'
+Natija: Protocol : TLSv1.2 va Verify return code: 0 (ok).
+TLS 1.3 tekshiruvi:
+openssl s_client -connect srv1.a2.lab:443 -tls1_3 -CAfile ~/a2-ca.crt < /dev/null | grep -E 'Protocol|Cipher|Verify return code'
+Natija: Protocol : TLSv1.3 va Verify return code: 0 (ok).
+Eskirgan TLS 1.1 rad etilishi:
+openssl s_client -connect srv1.a2.lab:443 -tls1_1 < /dev/null
+Natija: Server ulanishni rad etadi (handshake failure yoki xatolik bilan uziladi).
+`12-rasm
+5-bosqich: strongSwan orqali IKEv2/IPsec transport rejimini sozlash
+Bosqichning mohiyati va maqsadi
+Transport rejimini sozlash: Tunnel (Gateway-to-Gateway) emas, balki ikki server (websrv: 192.168.57.20 va LAN-CLIENT: 192.168.57.10) o‘rtasida to‘g‘ridan-to‘g‘ri Transport Mode o‘rnatish.
+IKEv2 va PSK autentifikatsiyasi: Boshqaruv kanali (Control Plane) uchun xavfsiz IKEv2 protokolidan va umumiy maxfiy kalitdan (Pre-Shared Key) foydalanish.
+SA (Security Association) o‘rnatilishi: Ikkala tomonda ham IKE SA va Child SA (ESP) ulanishlarini to‘liq o‘rnatish (ESTABLISHED / INSTALLED).
+Paketlar sathida isbotlash: tcpdump orqali tarmoqda IP paketlari ochiq emas, ESP (Encapsulating Security Payload) protokoli bilan shifrlanib o‘tayotganini qayd etish.
+1-qadam: websrv da konfiguratsiya faylini yaratish
+websrv terminalida faylni oching:
+sudo nano /etc/swanctl/conf.d/a2-ipsec.conf
+Ichiga quyidagi blokni to‘liq joylashtiring:
+connections {
+srv1-client1 {
+version = 2
+local_addrs = 192.168.57.20
+remote_addrs = 192.168.57.10
+local {
+auth = psk
+id = srv1
+}
+remote {
+auth = psk
+id = client1
+}
+children {
+transport-net {
+mode = transport
+start_action = none
+}
+}
+}
+}
+secrets {
+ike-srv1 {
+id-1 = client1
+secret = "A2LabSuperSecretKey2026"
+}
+}
+2-qadam: Ruxsatni to‘g‘rilash va yuklash
+sudo chmod 600 /etc/swanctl/conf.d/a2-ipsec.conf
+sudo swanctl --load-all
+Tekshirish: Bu safar plaginlar ro‘yxatining tagida quyidagi yozuvlar chiqishi lozim:(13-rasm)
+loaded connection 'srv1-client1'
+loaded ike secret 'ike-srv1'
+Ulanish profili tayyorligini ko‘rish:(14-rasm)
+sudo swanctl --list-conns
+13-rasm
+14-rasm.
+3-qadam: LAN-CLIENT da fayl mavjudligini tasdiqlash va yuklash
+LAN-CLIENT (192.168.57.10) terminaliga o‘ting:
+Faylni ochib tekshiring:
+sudo nano /etc/swanctl/conf.d/a2-ipsec.conf
+Ichida quyidagi yozuv borligiga ishonch hosil qiling (agar bo‘sh bo‘lsa, joylashtiring):
+connections {
+client1-srv1 {
+version = 2
+local_addrs = 192.168.57.10
+remote_addrs = 192.168.57.20
+local {
+auth = psk
+id = client1
+}
+remote {
+auth = psk
+id = srv1
+}
+children {
+transport-net {
+mode = transport
+start_action = none
+}
+}
+}
+}
+secrets {
+ike-client1 {
+id-1 = srv1
+secret = "A2LabSuperSecretKey2026"
+}
+}
+Yuklang:
+sudo chmod 600 /etc/swanctl/conf.d/a2-ipsec.conf
+sudo swanctl --load-all
+Tekshirish: loaded connection 'client1-srv1' chiqishi shart.(15-rasm)
+15-rasm.
+4-qadam: Ulanishni ko‘tarish (LAN-CLIENT dan);
+LAN-CLIENT terminalidan ulanishni qo‘lda ishga tushiring:
+sudo swanctl --initiate --child transport-net
+Tekshirish: Natijada initiate completed successfully xabari chiqadi.(16-rasm)
+Holatni tekshirish:
+sudo swanctl --list-sas
+Tekshirish: client1-srv1 ulanishi ostida ESTABLISHED va INSTALLED, TRANSPORT holati ko‘rinadi.(17-rasm)
+16-rasm
+17-rasm
+6-bosqich: IPsec SA, Linux XFRM siyosati va tcpdump orqali shifrlangan trafik tahlili
+Ilova sathi (strongSwan): IKE SA va Child SA holati.
+Yadro sathi (Linux XFRM): Linux yadrosi darajasidagi shifrlash siyosatlari va holatlari
+Tarmoq sathi (tcpdump): Paketlarning ochiq matn emas, aynan shifrlangan ESP (IP protocol 50) ko‘rinishida o‘tishi.
+1-qadam: strongSwan SA sessiyalarini tekshirish
+Bu qadamda IKEv2 boshqaruv kanali va ESP ma'lumotlar kanali o‘rnatilgani ko‘rsatiladi.
+LAN-CLIENT(192.168.57.10) yoki websrv (192.168.57.20) terminalida:
+sudo swanctl --list-sas
+Verification: Chiqishda quyidagi yozuvlar bo‘lishi shart:
+client1-srv1: ... ESTABLISHED (IKE SA muvaffaqiyatli ulangan).
+transport-net: ... INSTALLED, TRANSPORT (Transport rejimida ESP shifrlash faol).(18-rasm)
+18-rasm
+2-qadam: Linux yadrosidagi XFRM siyosatlarini ko‘rish
+Linux yadrosida tarmoq paketlarini shifrlash qoidalari qanday o‘rnashganini ko‘rsatadi.
+WEBSRV (192.168.57.20) terminalida:
+sudo ip xfrm policy
+Verification: Ekranda ikkita yo‘nalish bo‘yicha qoidalar chiqishi kerak:
+src 192.168.57.20 dst 192.168.57.10 ... dir out ... tmpl src 192.168.57.20 dst 192.168.57.10 proto esp mode transport
+src 192.168.57.10 dst 192.168.57.20 ... dir in ... tmpl src 192.168.57.10 dst 192.168.57.20 proto esp mode transport
+Bu yadro darajasida mode transport va proto esp majburlanganini isbotlaydi.(19-rasm)
+19-rasm
+3-qadam: Linux yadrosidagi shifrlash kalitlari va bayt hisoblagichlarini ko‘rish
+Bu yerda yadro qaysi shifrlash algoritmini (masalan, aes-gcm yoki aes-cbc) ishlatayotgani va shifrlangan paketlar/baytlar soni (lifetime current) ko‘rinadi.
+websrv (192.168.57.20) terminalida:
+sudo ip xfrm state
+Verification: Har bir yo‘nalish uchun mode transport, enc <algoritm_nomi> va current: ... bytes hisoblagichi ko‘rinadi.(20-rasm)
+20-rasm
+4-qadam: Tarmoq oqimini tcpdump orqali ushlash
+Trafik ochiq matn (ICMP yoki HTTP) emas, faqat ESP orqali o‘tayotganining amaliy isboti.
+websrv terminalida tarmoq paketlarini ushlashni yoqing:
+sudo tcpdump -n -i ens33 esp
+LAN-CLIENT terminalidan ping yuboring:
+ping -c 4 192.168.57.20
+websrv terminalidagi natija: Ekranda ICMP echo request/reply o‘rniga aynan quyidagilar paydo bo‘ladi:(21-rasm)
+IP 192.168.57.10 > 192.168.57.20: ESP(spi=0x..., seq=...)
+IP 192.168.57.20 > 192.168.57.10: ESP(spi=0x..., seq=...)
+21-rasm.
+7-bosqich: Nazoratli xatolik sinovi: Noto‘g‘ri PSK va tizimni tiklash
+Oldingi bosqichlarda IPsec xavfsiz kanali to‘g‘ri ishlashi tekshirildi. 7-bosqichning asosiy maqsadi — salbiy sinov (negative testing / fault injection) o‘tkazishdir.
+Axborot xavfsizligida tizim faqat to‘g‘ri ma'lumotlar bilan ishlashini emas, balki buzilgan yoki begona ulanishlarni qanday rad etishini tekshirish juda muhim:
+Autentifikatsiya mexanizmining ishonchliligi: Agar tajovuzkor yoki begona tugun noto‘g‘ri Pre-Shared Key (PSK) ishlatsa, IKEv2 protokoli seansni darhol to‘xtatishi (AUTHENTICATION_FAILED) va unga hech qanday ESP shifrlash kalitlarini bermasligini isbotlash.
+Kuzatuvchanlik (Audit va Loglar): Xavfsizlik hodisasi yuz berganda strongSwan jurnalida (journalctl / charon loglari) qanday xato yozuvlari qolishini ko‘rish va qayd etish.
+Tizimni tiklash (Disaster Recovery / Rollback): Xatolik yuz bergandan so‘ng konfiguratsiyani yana asl holatiga qaytarib, xizmatni qayta ko‘tarish amaliyotini mustahkamlash.
+1-qadam: LAN-CLIENT da PSK kalitini ataylab buzish
+LAN-CLIENT (192.168.57.10) terminalida mavjud ulanishni to‘xtatib, noto‘g‘ri kalit kiritamiz:
+Avval mavjud ulanishni uzing:
+sudo swanctl --terminate --ike client1-srv1
+Verification: terminate completed successfully chiqadi.
+Konfiguratsiya faylini oching:
+sudo nano /etc/swanctl/conf.d/a2-ipsec.conf
+secrets blokidagi secret qiymatini ataylab xato qilib o‘zgartiring:
+secrets {
+ike-client1 {
+id-1 = srv1
+secret = "WrongFakeKey12345"
+}
+}
+Yangi xato kalitni yuklang:
+sudo swanctl --load-all
+Verification: loaded ike secret 'ike-client1' yozuvi chiqadi.(22-rasm)
+22-rasm
+2-qadam: Xatolikni keltirib chiqarish va qayd etish (1-Skrinshot)
+LAN-CLIENT terminalidan ulanishni ishga tushiring:
+sudo swanctl --initiate --child transport-net
+Verification (Hisobot uchun 1-Skrinshot): Terminalda ulanish rad etilgani va quyidagi xatolik ko‘rinadi:(23-rasm)
+[IKE] received AUTHENTICATION_FAILED notify error
+establishing connection 'client1-srv1' failed
+23-rasm
+3-qadam: Xatolik jurnalini tekshirish
+Serverlar xavfsizlik hodisasini jurnalga qayd qilganini ko‘rish uchun websrv (192.168.57.20) terminalida logni tekshiring:
+sudo journalctl -u strongswan-starter -n 20 --no-pager
+(yoki sudo journalctl -e | grep -i 'auth')
+Verification: Jurnalda verification of AUTH payload failed yoki AUTHENTICATION_FAILED xabari qizil/ogohlantirish holatida chiqadi.(24-rasm)
+24-rasm
+4-qadam: Kalitni tiklash va ulanishni qayta ko‘tarish (3-Skrinshot)
+LAN-CLIENT terminalida to‘g‘ri kalitni tiklaymiz:
+Faylni oching:
+sudo nano /etc/swanctl/conf.d/a2-ipsec.conf
+Asl to‘g‘ri kalitni qaytaring:
+secret = "A2LabSuperSecretKey2026"
+Konfiguratsiyani qayta yuklang:
+sudo swanctl --load-all
+Ulanishni qayta ko‘taring:
+sudo swanctl --initiate --child transport-net
+Verification : initiate completed successfully chiqadi.
+Holatni tasdiqlang:
+sudo swanctl --list-sas
+Verification: Qaytadan ESTABLISHED va INSTALLED, TRANSPORT holati ko‘rinadi (25-rasm)
+25-rasm
+8-bosqich: Yakuniy integratsion tekshiruv va laboratoriyani xavfsiz yakunlash
+8-bosqichning maqsadi va mohiyati
+End-to-End integratsion sinov: Mijoz (LAN-CLIENT: 192.168.57.10) serverdagi (websrv: 192.168.57.20) HTTPS veb-saytga murojaat qilganda, paketlar bir vaqtning o‘zida ham TLS (4-bosqich), ham IPsec ESP (5-bosqich) bilan ikki marta shifrlanib yetib borishini tasdiqlash.
+Resurslar butunligi nazorati: Tizimda qolib ketgan fon jarayonlari (masalan, tcpdump), CPU sarfi va xizmatlar (nginx, strongswan) holatini barqarorlashtirish.
+Xavfsiz yakunlash (Teardown): Barcha sinovlar tugagach, IPsec SA ulanishlarini to‘g‘ri yopish (graceful termination) va hisobot uchun yakuniy natijalarni jamlash.
+1-qadam: End-to-End integratsiyani tekshirish
+Mijozdan serverga o‘rnatilgan o‘zaro CA sertifikati orqali to‘liq xavfsiz HTTPS so‘rov yuboriladi.
+LAN-CLIENT (192.168.57.10) terminalida:
+curl -v --cacert ~/a2-ca.crt https://srv1.a2.lab
+Verification: Chiqishda quyidagi ikki jihat ko‘rinishi lozim:
+SSL certificate verify ok va SSL connection using TLSv1.2 (yoki TLSv1.3).
+Serverdan HTTP/1.1 200 OK javobi va 4-bosqichda tuzilgan HTML sahifa matni.(26-rasm)
+26-rasm
+2-qadam: Yadro va SA holatini integratsiyalashgan audit qilish
+HTTPS so‘rovi o‘tganidan so‘ng, paketlar aynan ESP hisoblagichiga qo‘shilganini tekshiring.
+websrv (192.168.57.20) terminalida:
+sudo ip xfrm state | grep -E 'mode|current'
+Verification: Ekranda mode transport ostida current: ... bytes hisoblagichi so‘rovdan keyin oshgani va trafik IPsec yadrosi orqali o‘tgani ko‘rinadi.(27-rasm)
+27-rasm
+3-qadam: Xavfsizlik seansini xavfsiz yopish (Graceful Teardown)
+Laboratoriya topshirig‘i to‘liq tekshirib bo‘lingach, SA seanslari tarmoqqa xalaqit bermasligi uchun qoidalarga muvofiq yopiladi.
+LAN-CLIENT (192.168.57.10) terminalida:
+sudo swanctl --terminate --ike client1-srv1
+Verification: Ekranda terminate completed successfully xabari chiqishi lozim.
+Har ikkala serverda seanslar to‘liq bo‘shaganini tekshiring:
+sudo swanctl --list-sas
+Verification: Chiqish bo‘sh bo‘lishi (hech qanday faol SA qolmasligi) kerak.(28-rasm)
+28-rasm
+4-qadam: Tizim resurslarini tozalash va barqarorlashtirish
+Har ikkala virtual mashinada CPU/RAM ni band qilib qo‘yishi mumkin bo‘lgan fon jarayonlarini to‘xtating:
+# 1. Fonda qolib ketgan tcpdump jarayonlarini tozalash
+sudo killall -9 tcpdump 2>/dev/null
+# 2. Xizmatlarni toza holatda qoldirish
+sudo systemctl status nginx --no-pager
+sudo systemctl status strongswan-starter --no-pager 2>/dev/null || sudo systemctl status strongswan --no-pager
+Verification: nginx va strongswan xizmatlari yashil active (running) holatida, terminal esa fon jarayonlaridan to‘liq xoli bo‘lishi kerak.(29-rasm)
+29-rasm
+9-bosqich: Natija jadvallari va o‘qituvchi himoya savollariga to‘liq javoblar
+1.Laboratoriya va xizmatlar holati jadvali (3.1-jadval)
+Obyekt
+Interfeys
+IP manzil/Niqob
+Xizmatlar/Portlar
+Bazaviy holat
+LAN-CLIENT
+ens37 (yoki LAB_IF)
+192.168.57.10/24
+OpenSSH client, curl, strongSwan initiator
+UP, Gateway/DNS yo‘q
+WEBSRV
+ens37 (yoki LAB_IF)
+192.168.57.20/24
+22/tcp (SSH), 443/tcp (HTTPS), UDP 500/4500 (IKE), IP 50 (ESP)
+UP, Gateway/DNS yo‘q
+A2-LAB
+VMware vmnet2
+192.168.57.0/24
+Izolyatsiyalangan L2/L3 virtual tarmoq segmenti
+DHCP yo‘q, Host-only
+2.SSH sozlamasi va sinovlari jadvali (3.2-jadval)
+Tekshiruv bosqichi
+Kutiladigan natija
+Haqiqiy natija
+Holati
+sshd -t
+Sintaksis xatoliksiz tugaydi
+Chiqish bo‘sh (kod: 0)
+Muvaffaqiyatli
+PubkeyAuthentication
+yes
+pubkeyauthentication yes
+Muvaffaqiyatli
+PasswordAuthentication
+no
+passwordauthentication no
+Muvaffaqiyatli
+PermitRootLogin
+no
+permitrootlogin no
+Muvaffaqiyatli
+Kalitli kirish sinovi
+SSH_KEY_OK qaytadi
+SSH_KEY_OK
+Muvaffaqiyatli
+Password-only urinish
+Permission denied (publickey)
+Permission denied (publickey)
+Muvaffaqiyatli (Nazoratli rad)
+3.TLS sertifikati va HTTPS sinovlari jadvali (3.3-jadval)
+Maydon/Sinov
+Kutiladigan qiymat
+Haqiqiy qiymat
+Holati
+Subject
+CN=srv1.a2.lab
+subject=C=UZ, O=A2 Lab, CN=srv1.a2.lab
+To‘g‘ri
+Issuer
+CN=A2 Lab CA
+issuer=C=UZ, O=A2 Lab, CN=A2 Lab CA
+To‘g‘ri
+SAN (Subject Alt Name)
+DNS:srv1.a2.lab, IP:192.168.57.20
+DNS:srv1.a2.lab, IP:192.168.57.20
+To‘g‘ri
+Amal qilish muddati
+120 kun
+notBefore=... notAfter=... (120 days)
+To‘g‘ri
+openssl verify
+OK
+srv1.crt: OK
+Muvaffaqiyatli
+To‘g‘ri host (srv1.a2.lab)
+200 OK, Verify return code: 0
+A2 TLS service is working, code 0
+Muvaffaqiyatli
+Noto‘g‘ri host (wrong.a2.lab)
+Sertifikat nomi mos emas (Xato 60)
+SSL: certificate subject name does not match
+Muvaffaqiyatli (Nazoratli rad)
+4.IPsec SA va XFRM tekshiruvi jadvali (3.4-jadval)
+Tekshiruv turi
+Kutiladigan natija
+Haqiqiy kuzatuv
+Holati
+IKE SA
+ESTABLISHED
+1 up, 0 connecting, a2-host-to-host[1]: ESTABLISHED
+Faol
+CHILD SA
+INSTALLED, TRANSPORT
+a2-host-to-host{1}: INSTALLED, TUNNEL=no (TRANSPORT)
+Faol
+Peer / Selektorlar
+192.168.57.10 === 192.168.57.20
+192.168.57.10/32 === 192.168.57.20/32
+To‘g‘ri
+IKE algoritmlari
+AES-256 / SHA-256 / MODP-2048
+AES_CBC_256/HMAC_SHA2_256_128/MODP_2048
+Mos
+ESP algoritmlari
+AES-256 / SHA-256
+AES_CBC_256/HMAC_SHA2_256_128
+Mos
+ip xfrm state
+Kiruvchi va chiquvchi ESP SAD
+2 ta ESP state yozuvi mavjud (in/out SPI)
+To‘g‘ri
+ip xfrm policy
+in/out transport siyosatlari
+Siyosatlar yadroga yuklangan (mode transport)
+To‘g‘ri
+tcpdump tahlili
+ICMP ochiq ko‘rinmaydi, faqat ESP
+IP ... > ...: ESP(spi=0x...,seq=...)
+Tasdiqlandi
+5.Integratsion va nazoratli salbiy sinovlar jadvali (3.5-jadval)
+Test ID
+Ssenariy tavsifi
+Kutiladigan natija
+Haqiqiy natija
+Xulosa va Izoh
+T1
+SSH kalitli kirish
+Muvaffaqiyatli kirish
+SSH_KEY_OK
+ED25519 kaliti to‘g‘ri tekshirildi
+T2
+SSH parolli urinish
+Ulanish rad etilishi
+Permission denied
+Parol orqali kirish bloklangan
+T3
+TLS to‘g‘ri SAN
+200 OK va Verify OK
+Sahifa ochildi
+Lokal CA va SAN to‘liq tasdiqlandi
+T4
+TLS noto‘g‘ri host
+Sertifikat xatosi
+curl: (60) mismatch
+MITM hujumidan himoya ishlamoqda
+T5
+IPsec to‘g‘ri PSK
+SA o‘rnatiladi
+INSTALLED
+IKEv2 muvaffaqiyatli kelishildi
+T6
+IPsec noto‘g‘ri PSK
+Autentifikatsiya xatosi
+AUTHENTICATION_FAILED
+Begona ulanish rad etildi
+T7
+Tiklashdan so‘ng SSH+HTTPS
+Ikkisi ham ishlaydi
+Ikkisi ham muvaffaqiyatli
+IPsec ustida L7 protokollari shaffof ishlaydi

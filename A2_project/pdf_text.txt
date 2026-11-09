@@ -1,0 +1,935 @@
+TARMOQ XAVFSIZLIGI | 5-semestr | A2 amaliy mashg‘ulot | 1-variant
+
+TARMOQ XAVFSIZLIGI
+A2. TLS, SSH va IPsec protokollarini sozlash
+1-VARIANT — Ikki Ubuntu Server o‘rtasida ko‘p qatlamli himoyalangan aloqa kanalini yaratish
+Mashg‘ulot maqsadi. Talaba izolyatsiyalangan ikki-VM laboratoriyasida OpenSSH ni kalit asosidagi autentifikatsiyaga
+o‘tkazadi, lokal sertifikatlash markazi yordamida Nginx uchun TLS sertifikat yaratadi va IKEv2/IPsec transport rejimini
+sozlaydi. Har bir protokolning ishlashi ijobiy hamda nazoratli salbiy sinov bilan tekshiriladi.
+Kutiladigan natija. Talaba SSH, TLS va IPsec qaysi qatlam hamda trafikni himoyalashini tushuntiradi; sertifikat SAN
+maydoni va ishonch zanjirini tekshiradi; SSH parol orqali kirishini xavfsiz o‘chiradi; IPsec Security Association va
+Linux XFRM siyosatini dalil bilan ko‘rsatadi; xato sozlamani aniqlab, avvalgi holatga qaytara oladi.
+Ko‘rsatkich
+
+Qiymat
+
+Tavsiya etilgan vaqt
+
+80 daqiqa; paketlar va VM shablonlari oldindan tayyorlansa
+
+Bajarish muhiti
+
+Windows 11 host + VMware Workstation yoki VirtualBox
+
+Virtual mashinalar
+
+CLIENT-1 va SRV-1: Ubuntu Server 24.04 LTS, har biri 2 vCPU, 2 GB
+RAM, 20 GB disk
+
+Laboratoriya segmenti
+
+A2-LAB — 192.168.57.0/24; lab adapterida gateway va DNS berilmaydi
+
+Himoya qatlamlari
+
+SSH kaliti; HTTPS/TLS sertifikati; IKEv2/IPsec transport rejimi
+
+Asosiy vositalar
+
+OpenSSH, OpenSSL, Nginx, curl, strongSwan, tcpdump, iproute2
+
+Baholash
+
+10 ball
+
+Qo‘shimcha ochiq manbali dasturiy ta’minot va tayyorgarlik
+Ushbu variant to‘liq ochiq manbali vositalarga tayangan. CLIENT-1 tekshiruvchi va IPsec tengdosh, SRV-1 esa
+SSH/HTTPS xizmatlari hamda ikkinchi IPsec tengdosh sifatida ishlaydi. Quyidagi paketlar mashg‘ulot boshlanishidan
+oldin VM shabloniga o‘rnatilsa, amaliy qismni 80 daqiqada yakunlash osonlashadi.
+Vosita
+
+Vazifasi
+
+VM
+
+Holati
+
+CLIENT-1 / SRV-1
+
+Majburiy
+
+openssh-client/server
+
+ED25519 kaliti va xavfsiz masofaviy boshqaruv
+
+openssl
+
+Lokal CA, CSR, sertifikat va TLS sessiyasini tekshirish
+
+ikkalasi
+
+Majburiy
+
+nginx
+
+TLS 1.2/1.3 bilan HTTPS xizmati
+
+SRV-1
+
+Majburiy
+
+curl
+
+CA va host nomini tekshirgan holda HTTPS so‘rovi
+
+CLIENT-1
+
+Majburiy
+
+strongswan
+
+IKEv2 orqali IPsec SA va transport siyosatini yaratish
+
+ikkalasi
+
+Majburiy
+
+tcpdump
+
+Ochiq ICMP va ESP/IKE trafikini farqlash
+
+ikkalasi
+
+Majburiy
+
+iproute2
+
+Interfeys, route hamda XFRM state/policyni ko‘rish
+
+ikkalasi
+
+Majburiy
+
+CLIENT-1 da:
+sudo apt update
+sudo apt install -y openssh-client openssl curl strongswan tcpdump iproute2
+
+SRV-1 da:
+sudo apt update
+sudo apt install -y openssh-server openssl nginx strongswan tcpdump iproute2
+sudo systemctl enable --now ssh nginx strongswan-starter
+
+A2 — TLS, SSH va IPsec protokollarini sozlash
+Sahifa 1
+
+TARMOQ XAVFSIZLIGI | 5-semestr | A2 amaliy mashg‘ulot | 1-variant
+
+Tayyorgarlik. O‘qituvchi “A2-base” snapshotida paketlarni oldindan o‘rnatishi, lekin SSH kalitlari, TLS
+kalitlari/sertifikatlari va IPsec sirlarini tayyorlamasligi kerak. Har bir talaba kriptografik obyektlarni o‘z VMlarida
+yaratadi.
+
+Muhim tushunchalar va himoya qatlamlari
+Protokol
+
+Himoyalanadigan aloqa
+
+Ushbu variantdagi autentifikatsiya
+
+Asosiy dalil
+
+SSH
+
+Masofaviy terminal va SCP/SFTP
+
+Server host kaliti + foydalanuvchining ED25519 ochiq
+kaliti
+
+ssh -v va sshd -T
+
+TLS
+
+Nginx HTTPS ilova trafigi
+
+Lokal CA imzolagan server sertifikati; SAN bo‘yicha
+host tekshiruvi
+
+curl --cacert va openssl
+s_client
+
+IPsec
+
+Ikki host orasidagi IP yuklamasi
+
+IKEv2 va faqat laboratoriya uchun kuchli PSK
+
+ipsec statusall, ip xfrm,
+tcpdump ESP
+
+Muhim farq. SSH va TLS ma’lum ilova sessiyasini himoyalaydi; IPsec transport rejimi esa IP sarlavhasini saqlab,
+yuqori qatlam yuklamasini ESP bilan himoyalaydi. Bir laboratoriyada uchalasi qo‘llanishi “har doim uch marta
+shifrlash kerak” degani emas — maqsad ularning qamrovi va tekshirish usullarini solishtirishdir.
+Ishlab chiqarish muhiti. PSK bu izolyatsiyalangan A2 laboratoriyasi uchun tanlangan. Real tizimda tashkilot
+siyosati, tengdoshlar soni va tahdid modeli hisobga olinib, IKEv2 uchun sertifikatli autentifikatsiya afzal ko‘riladi.
+Hujjatdagi namunaviy sirni real tarmoqda ishlatmang.
+
+1. Topshiriqni bajarishga ko‘rsatma
+1.1. Laboratoriya ssenariysi va xavfsizlik chegarasi
+CLIENT-1 administrator stansiyasini, SRV-1 esa ichki boshqaruv va HTTPS xizmatiga ega serverni ifodalaydi. Barcha
+sinovlar faqat talabaning A2-LAB virtual segmentida bajariladi. Paket o‘rnatish uchun alohida NAT adapteri vaqtincha
+ishlatilishi mumkin; sozlash va trafik kuzatuvi boshlanishidan oldin NAT uziladi yoki laboratoriya interfeysidan qat’iy
+ajratiladi.
+Obyekt
+
+Nom/IP
+
+Vazifa
+
+Kutiladigan xizmat
+
+Mijoz VM
+
+CLIENT-1 — 192.168.57.10/24
+
+SSH/HTTPS tekshiruvi va IPsec initiator
+
+ssh-client, curl,
+strongSwan
+
+Server VM
+
+SRV-1 — 192.168.57.20/24
+
+Masofaviy boshqaruv, HTTPS va IPsec
+peer
+
+22/tcp, 443/tcp, IKE/ESP
+
+Virtual segment
+
+A2-LAB — 192.168.57.0/24
+
+Izolyatsiyalangan L2 tarmoq
+
+Gateway va DNS yo‘q
+
+Hisob
+
+student
+
+SRV-1 dagi oddiy sudo foydalanuvchi
+
+Boshqa nom bo‘lsa
+buyruqlarda almashtiriladi
+
+Ruxsat va chegaralar. tcpdump, SSH sinovlari va IPsec faqat 192.168.57.10 hamda 192.168.57.20 orasida bajariladi.
+Universitetning real LAN interfeysi yoki boshqa talabaning VMiga paket yubormang. Maxfiy kalit, PSK va parol
+tushgan oynani hisobotga joylamang.
+
+1.2. Virtual tarmoq va IP manzillarni tayyorlash
+VMware da bitta Host-only VMnet, VirtualBox da esa bitta Internal Network yoki Host-only tarmoq yarating va nomini
+A2-LAB deb belgilang. DHCP ni o‘chiring. Quyidagi buyruqlarda enp0s8 o‘rniga ip -br link orqali topilgan laboratoriya
+interfeysini yozing.
+
+A2 — TLS, SSH va IPsec protokollarini sozlash
+Sahifa 2
+
+TARMOQ XAVFSIZLIGI | 5-semestr | A2 amaliy mashg‘ulot | 1-variant
+
+CLIENT-1 da:
+ip -br link
+LAB_IF=enp0s8
+sudo ip link set "$LAB_IF" up
+sudo ip addr flush dev "$LAB_IF"
+sudo ip addr add 192.168.57.10/24 dev "$LAB_IF"
+ip -br addr show "$LAB_IF"
+ip route get 192.168.57.20
+
+SRV-1 da:
+ip -br link
+LAB_IF=enp0s8
+sudo ip link set "$LAB_IF" up
+sudo ip addr flush dev "$LAB_IF"
+sudo ip addr add 192.168.57.20/24 dev "$LAB_IF"
+ip -br addr show "$LAB_IF"
+sudo ss -lntup | grep -E ':(22|443)\b' || true
+
+CLIENT-1 dan bazaviy aloqani tekshiring:
+ping -c 3 192.168.57.20
+ip neigh show 192.168.57.20
+
+Agar ping ishlamasa. Ikkala VM bir xil A2-LAB segmentiga ulanganini, interfeyslar UP ekanini, niqob /24 ekanini
+va host Windows 11 dagi real LAN adapteri tanlanmaganini tekshiring. IPsec bosqichiga ping ishlamaguncha
+o‘tmang.
+
+1.3. SSH ni ED25519 kaliti asosida sozlash
+Avval SRV-1 konsolini ochiq qoldiring. “student” o‘rniga server shablonidagi haqiqiy oddiy foydalanuvchi nomini
+yozing. CLIENT-1 da alohida laboratoriya kalit juftini yarating va ochiq kalitni serverga ko‘chiring:
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+ssh-keygen -t ed25519 -a 64 -f ~/.ssh/a2_ed25519
+ssh-copy-id -i ~/.ssh/a2_ed25519.pub student@192.168.57.20
+ssh -i ~/.ssh/a2_ed25519 student@192.168.57.20 'hostname; whoami'
+
+ssh-keygen so‘raganda kalit uchun parol iborasini kiriting; hisobotda uni ko‘rsatmang. Agar 80 daqiqalik nazorat muhiti
+avtomatlashtirishni talab qilsa, o‘qituvchi ruxsati bilan bo‘sh passphrase ishlatilishi mumkin, ammo uning real tizimdagi
+xavfini xulosada qayd eting.
+SRV-1 da mavjud sozlamani zaxiralang va alohida drop-in fayl yarating:
+sudo cp -a /etc/ssh/sshd_config /etc/ssh/sshd_config.a2-backup
+sudo nano /etc/ssh/sshd_config.d/99-a2-hardening.conf
+
+Fayl mazmuni:
+PermitRootLogin no
+PubkeyAuthentication yes
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+MaxAuthTries 3
+AllowUsers student
+
+A2 — TLS, SSH va IPsec protokollarini sozlash
+Sahifa 3
+
+TARMOQ XAVFSIZLIGI | 5-semestr | A2 amaliy mashg‘ulot | 1-variant
+
+Sintaksis va amaldagi qiymatlarni tekshirib, xizmatni qayta yuklang. Birinchi SSH oynani yopmasdan, ikkinchi
+terminaldan yangi ulanishni sinang:
+sudo sshd -t
+sudo sshd -T | grep -E
+'^(permitrootlogin|pubkeyauthentication|passwordauthentication|kbdinteractiveauthentication|maxau
+thtries|allowusers)'
+sudo systemctl reload ssh
+
+CLIENT-1 da ijobiy va salbiy sinov:
+ssh -i ~/.ssh/a2_ed25519 student@192.168.57.20 'echo SSH_KEY_OK'
+ssh -o PubkeyAuthentication=no -o PreferredAuthentications=password
+
+student@192.168.57.20
+
+Kutiladigan natija. Kalit ko‘rsatilgan birinchi buyruq SSH_KEY_OK qaytaradi. Ikkinchi buyruq “Permission
+denied” bilan tugashi kerak. Bu nazoratli rad etish muvaffaqiyatsizlik emas, parol autentifikatsiyasi o‘chirilganining
+dalilidir.
+SSH tiklash. Kalit orqali yangi sessiya ochilmasa, SRV-1 konsolida sudo rm /etc/ssh/sshd_config.d/99-a2hardening.conf, sudo cp -a /etc/ssh/sshd_config.a2-backup /etc/ssh/sshd_config va sudo systemctl restart ssh
+buyruqlarini bajaring. Sababni tuzatmaguncha eski sessiyani yopmang.
+
+1.4. Lokal CA va TLS server sertifikatini yaratish
+SRV-1 da faqat ushbu laboratoriya uchun lokal sertifikatlash markazi va server kalitini yarating. CA private key serverda
+qoladi; CLIENT-1 ga faqat ca.crt beriladi.
+sudo install -d -m 700 /etc/a2-tls
+cd /etc/a2-tls
+sudo openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out ca.key
+sudo openssl req -x509 -new -sha256 -days 365 -key ca.key -out ca.crt
+-subj "/C=UZ/O=A2
+Lab/CN=A2 Lab CA"
+sudo openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out srv1.key
+sudo openssl req -new -key srv1.key -out srv1.csr
+-subj "/C=UZ/O=A2 Lab/CN=srv1.a2.lab"
+
+SAN va foydalanish cheklovlarini ko‘rsatuvchi /etc/a2-tls/srv1.ext faylini yarating:
+sudo nano /etc/a2-tls/srv1.ext
+
+Fayl mazmuni:
+basicConstraints=CA:FALSE
+keyUsage=digitalSignature,keyEncipherment
+extendedKeyUsage=serverAuth
+subjectAltName=DNS:srv1.a2.lab,IP:192.168.57.20
+
+CSR ni imzolang, private key ruxsatlarini cheklang va sertifikat maydonlarini tekshiring:
+cd /etc/a2-tls
+sudo openssl x509 -req -in srv1.csr -CA ca.crt -CAkey ca.key
+-CAcreateserial -out srv1.crt days 120 -sha256 -extfile srv1.ext
+sudo chmod 600 ca.key srv1.key
+sudo chmod 644 ca.crt srv1.crt
+sudo install -o student -g student -m 644 ca.crt /home/student/a2-ca.crt
+sudo openssl verify -CAfile ca.crt srv1.crt
+sudo openssl x509 -in srv1.crt -noout -subject -issuer -dates -ext subjectAltName
+
+A2 — TLS, SSH va IPsec protokollarini sozlash
+Sahifa 4
+
+TARMOQ XAVFSIZLIGI | 5-semestr | A2 amaliy mashg‘ulot | 1-variant
+
+Tekshiruv mezoni. verify chiqishi “srv1.crt: OK” bo‘lishi, Subject va Issuer turlicha ko‘rinishi, SAN da srv1.a2.lab
+hamda 192.168.57.20 mavjud bo‘lishi kerak. Faqat CN ga tayanmang: zamonaviy host tekshiruvida SAN muhim.
+
+1.5. Nginx da TLS 1.2/1.3 xizmatini ishga tushirish
+SRV-1 da alohida server blokini yarating:
+sudo nano /etc/nginx/sites-available/a2-tls
+
+Fayl mazmuni:
+server {
+listen 443 ssl;
+server_name srv1.a2.lab;
+ssl_certificate
+/etc/a2-tls/srv1.crt;
+ssl_certificate_key /etc/a2-tls/srv1.key;
+ssl_protocols TLSv1.2 TLSv1.3;
+location / {
+default_type text/plain;
+return 200 "A2 TLS service is working\n";
+}
+}
+
+Sozlamani yoqing va xatosiz ekanini tekshiring:
+sudo ln -sfn /etc/nginx/sites-available/a2-tls /etc/nginx/sites-enabled/a2-tls
+sudo nginx -t
+sudo systemctl reload nginx
+sudo ss -lntp | grep ':443'
+
+CLIENT-1 da server nomini lokal ravishda aniqlang va SRV-1 dagi foydalanuvchi uy katalogiga xavfsiz nusxalangan
+CA sertifikatini SSH orqali oling:
+echo '192.168.57.20 srv1.a2.lab' | sudo tee -a /etc/hosts
+scp -i ~/.ssh/a2_ed25519 student@192.168.57.20:~/a2-ca.crt ~/a2-ca.crt
+openssl x509 -in ~/a2-ca.crt -noout -subject -fingerprint -sha256
+
+To‘g‘ri nom bilan ijobiy sinov va noto‘g‘ri nom bilan salbiy sinov bajaring:
+curl --cacert ~/a2-ca.crt https://srv1.a2.lab/
+openssl s_client -connect 192.168.57.20:443 -servername srv1.a2.lab
+-CAfile ~/a2-ca.crt
+</dev/null 2>/dev/null | grep -E 'Protocol|Cipher|Verify return code'
+curl --resolve wrong.a2.lab:443:192.168.57.20
+--cacert ~/a2-ca.crt https://wrong.a2.lab/
+
+Kutiladigan natija. Birinchi curl xizmat matnini qaytaradi va s_client “Verify return code: 0 (ok)” ko‘rsatadi.
+wrong.a2.lab so‘rovi host nomi sertifikat SAN maydoniga mos kelmagani uchun rad etilishi kerak. -k yoki --insecure
+ishlatish testni ma’nosiz qiladi.
+
+1.6. IKEv2/IPsec transport rejimini sozlash
+Avval ikkala VMda /etc/ipsec.conf va /etc/ipsec.secrets fayllarini zaxiralang. Quyidagi konfiguratsiya ikkala VMda bir
+xil bo‘ladi; strongSwan lokal IP manzilga qarab o‘z tomonini aniqlaydi.
+sudo cp -a /etc/ipsec.conf /etc/ipsec.conf.a2-backup
+sudo cp -a /etc/ipsec.secrets /etc/ipsec.secrets.a2-backup
+sudo nano /etc/ipsec.conf
+
+A2 — TLS, SSH va IPsec protokollarini sozlash
+Sahifa 5
+
+TARMOQ XAVFSIZLIGI | 5-semestr | A2 amaliy mashg‘ulot | 1-variant
+
+/etc/ipsec.conf mazmuni:
+config setup
+uniqueids=no
+conn a2-host-to-host
+keyexchange=ikev2
+type=transport
+authby=psk
+left=192.168.57.10
+right=192.168.57.20
+ike=aes256-sha256-modp2048!
+esp=aes256-sha256!
+dpdaction=restart
+dpddelay=30s
+rekey=no
+auto=start
+
+Ikkala VMda /etc/ipsec.secrets faylini tahrirlang. Bu sir faqat izolyatsiyalangan laboratoriya uchun:
+sudo nano /etc/ipsec.secrets
+
+Fayl mazmuni:
+192.168.57.10 192.168.57.20 : PSK "A2-Lab-Only-Change-2026!"
+
+Ruxsatni cheklang, konfiguratsiyani qayta yuklang va CLIENT-1 dan ulanishni ko‘taring:
+sudo chmod 600 /etc/ipsec.secrets
+sudo ipsec restart
+sudo ipsec statusall
+
+CLIENT-1 da qo‘shimcha ravishda:
+sudo ipsec up a2-host-to-host
+ping -c 4 192.168.57.20
+sudo ipsec statusall
+
+Eslatma. IKE uchun UDP 500/4500, ESP uchun esa IP protokol 50 ishlatiladi. Agar UFW oldindan faol bo‘lsa,
+o‘qituvchi laboratoriya peer manzillari o‘rtasidagi IKE va ESP oqimlariga ruxsat berishi kerak. Ushbu variantda
+firewallni yoqish alohida baholanmaydi.
+
+1.7. IPsec SA, XFRM siyosati va shifrlangan trafikni tekshirish
+Ikkala VMda SA va kernel siyosatini tekshiring. Chiqishda a2-host-to-host nomi, ESTABLISHED/INSTALLED holati,
+192.168.57.10 ⇄ 192.168.57.20 selektorlari va ESP algoritmlari ko‘rinishi kerak:
+sudo ipsec statusall
+sudo ip xfrm state
+sudo ip xfrm policy
+
+SRV-1 da A2-LAB interfeysida 10 ta tegishli paketni kuzating; shu vaqtda CLIENT-1 dan ping yuboring:
+LAB_IF=enp0s8
+sudo tcpdump -ni "$LAB_IF" 'esp or udp port 500 or udp port 4500' -c 10
+
+CLIENT-1 da boshqa terminaldan:
+ping -c 6 192.168.57.20
+curl --cacert ~/a2-ca.crt https://srv1.a2.lab/
+
+A2 — TLS, SSH va IPsec protokollarini sozlash
+Sahifa 6
+
+TARMOQ XAVFSIZLIGI | 5-semestr | A2 amaliy mashg‘ulot | 1-variant
+
+Tahlil. IPsec o‘rnatilgach tcpdump da ICMP yoki HTTPS mazmuni ochiq ko‘rinmasligi, asosan ESP paketlari
+ko‘rinishi kutiladi. IP sarlavhalaridagi peer manzillari yashirilmaydi — bu transport rejimining xususiyati. tcpdump
+chiqishi shifrlash kalitini yoki foydali yukni ko‘rsatmaydi.
+
+1.8. Nazoratli xatolik: noto‘g‘ri PSK va tiklash
+Bu bosqich faqat A2-LAB da bajariladi. CLIENT-1 da to‘g‘ri sir nusxasini saqlang, faol SA ni tushiring va PSK ni
+vaqtincha boshqa qiymatga almashtiring. SRV-1 dagi qiymatni o‘zgartirmang.
+sudo cp -a /etc/ipsec.secrets /etc/ipsec.secrets.a2-ok
+sudo ipsec down a2-host-to-host
+sudo sed -i 's/A2-Lab-Only-Change-2026!/A2-Wrong-PSK-2026!/' /etc/ipsec.secrets
+sudo ipsec restart
+sudo ipsec up a2-host-to-host
+sudo journalctl -u strongswan-starter -n 30 --no-pager
+
+AUTHENTICATION_FAILED yoki PSK/autentifikatsiya bilan bog‘liq xabarni E-ID bilan qayd eting. So‘ng to‘g‘ri
+faylni tiklab, SA ni qayta yarating:
+sudo cp -a /etc/ipsec.secrets.a2-ok /etc/ipsec.secrets
+sudo chmod 600 /etc/ipsec.secrets
+sudo ipsec restart
+sudo ipsec up a2-host-to-host
+sudo ipsec statusall
+
+Muvaffaqiyat mezoni. Nazoratli xatoda ulanish o‘rnatilmaydi; tiklashdan keyin SA yana
+ESTABLISHED/INSTALLED bo‘ladi va ping ishlaydi. Sirning o‘zi yoki uni ochib bergan terminal qatori skrinshotga
+olinmaydi.
+
+1.9. Yakuniy integratsion tekshiruv va xavfsiz yakunlash
+IPsec qayta tiklangandan keyin SSH va HTTPS ni yana sinang. Bu yuqori qatlam xizmatlari IPsec siyosati mavjud
+paytda ham ishlashini ko‘rsatadi:
+ssh -i ~/.ssh/a2_ed25519 student@192.168.57.20 'echo SSH_OVER_IPSEC_OK'
+curl --cacert ~/a2-ca.crt https://srv1.a2.lab/
+sudo ipsec statusall
+sudo ip xfrm policy
+
+Ish tugagach VMlarni o‘chirib, o‘qituvchi ko‘rsatmasiga ko‘ra A2-base snapshotiga qayting. Private key yoki
+laboratoriya PSK sini umumiy papka, messenjer yoki hisobotga nusxalamang. Agar snapshot ishlatilmasa, o‘qituvchi
+keyingi mashg‘ulot uchun konfiguratsiyani saqlash yoki tiklash bo‘yicha alohida ko‘rsatma beradi.
+
+2. 1-variant topshirig‘i
+Talaba quyidagi bandlarni ketma-ket bajaradi. Buyruqlarni ko‘chirib ishlatishning o‘zi yetarli emas: har bir natija
+protokolning xavfsizlik xususiyati bilan izohlanadi.
+1. A2-LAB izolyatsiyalangan segmentini yarating; CLIENT-1 ga 192.168.57.10/24, SRV-1 ga 192.168.57.20/24 manzilini
+bering va bazaviy aloqani tekshiring.
+2. CLIENT-1 da alohida ED25519 kalit juftini yarating va ochiq kalitni SRV-1 dagi oddiy foydalanuvchiga o‘rnating.
+3. SRV-1 da root login, parol va keyboard-interactive autentifikatsiyani o‘chiring; sshd -t bilan tekshirib, xizmatni xavfsiz
+qayta yuklang.
+4. Kalitli SSH kirishining muvaffaqiyatini va password-only urinishning rad etilishini dalillang.
+5. SRV-1 da lokal CA, server private key, CSR va SAN maydonli sertifikat yarating; verify, subject, issuer, dates va SAN
+ni tekshiring.
+6. Nginx ni faqat TLS 1.2/1.3 uchun sozlang; CLIENT-1 da CA bilan to‘g‘ri host nomi muvaffaqiyatini va wrong.a2.lab rad
+etilishini ko‘rsating.
+A2 — TLS, SSH va IPsec protokollarini sozlash
+Sahifa 7
+
+TARMOQ XAVFSIZLIGI | 5-semestr | A2 amaliy mashg‘ulot | 1-variant
+
+7. Ikkala VMda IKEv2/IPsec transport konfiguratsiyasini va laboratoriya PSK sini o‘rnating; CLIENT-1 dan SA ni
+yarating.
+
+8. ipsec statusall, ip xfrm state/policy va tcpdump orqali INSTALLED holat, selektorlar hamda ESP trafikini dalillang.
+9. CLIENT-1 da PSK ni vaqtincha noto‘g‘ri qiymatga almashtirib autentifikatsiya xatosini qayd eting; zaxiradan tiklab SA
+ni qayta o‘rnating.
+IPsec faol holatda SSH va HTTPS sinovlarini takrorlang; uch protokolning qamrovi, autentifikatsiyasi va tekshiruv
+usulini xulosada solishtiring.
+
+10.
+
+3. To‘ldiriladigan natija jadvallari
+3.1. Laboratoriya va xizmatlar holati
+Obyekt
+
+Interfeys
+
+IP/niqob
+
+Xizmat/port
+
+CLIENT-1
+
+SSH client, curl, strongSwan
+
+SRV-1
+
+22/tcp, 443/tcp, IKE/ESP
+
+A2-LAB
+
+192.168.57.0/24
+
+Bazaviy holat
+
+Dalil ID
+
+Holat
+
+Dalil ID
+
+izolyatsiyalangan segment
+
+3.2. SSH sozlamasi va sinovlari
+Tekshiruv
+
+Kutiladigan natija
+
+sshd -t
+
+xatosiz tugaydi
+
+PubkeyAuthentication
+
+yes
+
+PasswordAuthentication
+
+no
+
+PermitRootLogin
+
+no
+
+Kalitli kirish
+
+SSH_KEY_OK
+
+Password-only kirish
+
+Permission denied
+
+Haqiqiy natija
+
+3.3. TLS sertifikati va HTTPS sinovlari
+Maydon/sinov
+
+Kutiladigan qiymat
+
+Subject
+
+CN=srv1.a2.lab
+
+Issuer
+
+CN=A2 Lab CA
+
+SAN
+
+DNS:srv1.a2.lab, IP:192.168.57.20
+
+Amal qilish muddati
+
+120 kun
+
+openssl verify
+
+OK
+
+To‘g‘ri host
+
+HTTPS javobi; verify code 0
+
+Noto‘g‘ri host
+
+sertifikat nomi mos emas
+
+Haqiqiy qiymat
+
+Holat
+
+Dalil ID
+
+3.4. IPsec SA va XFRM tekshiruvi
+Tekshiruv
+
+Kutiladigan natija
+
+IKE SA
+
+ESTABLISHED
+
+CHILD SA
+
+INSTALLED; transport
+
+Haqiqiy kuzatuv
+
+Holat
+
+Dalil ID
+
+A2 — TLS, SSH va IPsec protokollarini sozlash
+Sahifa 8
+
+TARMOQ XAVFSIZLIGI | 5-semestr | A2 amaliy mashg‘ulot | 1-variant
+Tekshiruv
+
+Kutiladigan natija
+
+Peer/selektor
+
+192.168.57.10 ⇄ 192.168.57.20
+
+IKE/ESP algoritmi
+
+AES-256, SHA-256, MODP-2048 / AES-256,
+SHA-256
+
+ip xfrm state
+
+in/out ESP state
+
+ip xfrm policy
+
+in/out/fwd siyosat
+
+tcpdump
+
+ESP yoki IKE paketlari
+
+Haqiqiy kuzatuv
+
+Holat
+
+Dalil ID
+
+3.5. Integratsion va nazoratli salbiy sinovlar
+Test ID
+
+Ssenariy
+
+Kutiladigan natija
+
+T1
+
+SSH kaliti
+
+muvaffaqiyat
+
+T2
+
+SSH password-only
+
+rad etiladi
+
+T3
+
+TLS to‘g‘ri SAN
+
+muvaffaqiyat
+
+T4
+
+TLS noto‘g‘ri host
+
+rad etiladi
+
+T5
+
+IPsec to‘g‘ri PSK
+
+SA o‘rnatiladi
+
+T6
+
+IPsec noto‘g‘ri PSK
+
+autentifikatsiya xatosi
+
+T7
+
+Tiklangandan so‘ng
+SSH+HTTPS
+
+ikkalasi ishlaydi
+
+Haqiqiy natija
+
+Sabab/izoh
+
+3.6. Nosozlikni aniqlash va tiklash jurnali
+Vaqt
+
+Alomat/xato
+
+Tekshiruv buyrug‘i
+
+Aniqlangan sabab
+
+Bajarilgan tuzatish
+
+Natija
+
+4. Topshiriladigan dalillar
+• Ikkala VMning nomi, A2-LAB interfeysi va IP manzili ko‘rinadigan dalillar.
+• SSH public key fingerprinti, sshd -t/sshd -T natijasi, muvaffaqiyatli kalitli kirish va rad etilgan password-only urinish.
+• TLS sertifikatining subject, issuer, dates va SAN chiqishi; private key mazmuni ko‘rsatilmaydi.
+• Nginx konfiguratsiya testi, 443/tcp tinglash holati, to‘g‘ri hostdagi HTTPS muvaffaqiyati va noto‘g‘ri host rad etilishi.
+• ipsec statusall hamda ip xfrm state/policy natijalari; kalit materiali va PSK ko‘rsatilmaydi.
+• A2-LAB interfeysida ESP/IKE trafikini ko‘rsatuvchi tcpdump dalili.
+• Noto‘g‘ri PSK xatosining jurnal parchasi va to‘g‘ri konfiguratsiyaga qaytgandan keyingi INSTALLED holat.
+• Barcha jadvallar, 6–8 gaplik tahliliy xulosa va o‘qituvchi savollariga og‘zaki javob.
+Skrinshot talabi. Har bir skrinshotda VM nomi, bajarilgan buyruq va natija birga ko‘rinsin. Maxfiy kalit fayli, PSK
+matni, foydalanuvchi paroli yoki kalit passphrase i hech qachon dalil sifatida ochilmaydi. Skrinshot ostiga E-ID, vaqt
+va bir gaplik izoh yoziladi.
+
+A2 — TLS, SSH va IPsec protokollarini sozlash
+Sahifa 9
+
+TARMOQ XAVFSIZLIGI | 5-semestr | A2 amaliy mashg‘ulot | 1-variant
+
+5. Tavsiya etilgan 80 daqiqalik ish taqsimoti
+Bosqich
+
+Vaqt
+
+Natija
+
+A2-LAB, IP va paketlar tekshiruvi
+
+10 daqiqa
+
+2 VM, ping va tayyor vositalar
+
+SSH kaliti va hardening
+
+15 daqiqa
+
+kalitli kirish; parol rad etiladi
+
+CA, sertifikat va Nginx TLS
+
+20 daqiqa
+
+SAN li sertifikat va HTTPS
+
+IKEv2/IPsec konfiguratsiyasi
+
+18 daqiqa
+
+ESTABLISHED/INSTALLED SA
+
+XFRM, tcpdump va integratsion test
+
+8 daqiqa
+
+ESP dalili; SSH/HTTPS ishlaydi
+
+Noto‘g‘ri PSK va tiklash
+
+5 daqiqa
+
+xato sababi va tiklangan SA
+
+Jadvallar, xulosa va yakuniy tekshiruv
+
+4 daqiqa
+
+topshirish paketi
+
+Vaqtni boshqarish. Paketlar oldindan o‘rnatilmagan yoki VM diski sekin bo‘lsa, ish 80 daqiqadan oshishi mumkin.
+Bunday holda o‘qituvchi A2-base snapshotidan foydalanadi; xavfsizlik tekshiruvlari va nazoratli xatolik
+qisqartirilmaydi.
+
+6. Baholash mezoni — 10 ball
+Mezon
+
+Ball
+
+Talab
+
+Laboratoriya segmenti va bazaviy aloqa
+
+0.5
+
+A2-LAB izolyatsiyasi, to‘g‘ri IP va ping
+
+SSH kaliti va xavfsiz sozlama
+
+2.0
+
+ED25519, backup, sshd -t, kalitli kirish, parol/root rad etilishi
+
+TLS kalit va sertifikat zanjiri
+
+1.5
+
+CA, private key ruxsati, CSR, SAN, verify va muddat
+
+Nginx HTTPS va TLS tekshiruvi
+
+1.5
+
+TLS 1.2/1.3, to‘g‘ri host muvaffaqiyati, noto‘g‘ri host rad etilishi
+
+IKEv2/IPsec sozlamasi
+
+2.0
+
+transport mode, algoritmlar, ESTABLISHED/INSTALLED SA
+
+XFRM va paket dalili
+
+1.0
+
+state/policy selektorlari va ESP/IKE tcpdump tahlili
+
+Nazoratli xato va tiklash
+
+0.5
+
+noto‘g‘ri PSK xatosi qayd etilib, SA muvaffaqiyatli tiklangan
+
+Hisobot va himoya
+
+1.0
+
+to‘liq jadvallar, sirlar oshkor qilinmagan, tahliliy xulosa va javoblar
+
+Baholash qoidasi. Faqat xizmatlarning “ishladi” skrinshoti to‘liq ball bermaydi. Talaba ijobiy va salbiy sinovlarni,
+autentifikatsiya usulini, ishonch manbasini, IPsec SA/XFRM holatini hamda tiklash qadamini tushuntirishi kerak.
+
+7. O‘qituvchi uchun qisqa himoya savollari
+• SSH, TLS va IPsec OSI/TCP-IP modelining qaysi qamrovlarida himoya beradi?
+• SSH host kaliti bilan foydalanuvchi kalitining vazifasi nimasi bilan farq qiladi?
+• PasswordAuthentication no dan oldin nima uchun ikkinchi SSH sessiyasini sinash kerak?
+• TLS sertifikatidagi Subject, Issuer va SAN maydonlari qanday vazifa bajaradi?
+• curl --cacert muvaffaqiyati nimani isbotlaydi, --insecure esa nega yaroqsiz dalil?
+• wrong.a2.lab sinovi nima uchun rad etildi, garchi IP manzil va CA to‘g‘ri bo‘lsa ham?
+• IKE SA bilan CHILD SA o‘rtasidagi farq nima?
+• Transport rejimida qaysi ma’lumot ochiq qoladi va qaysi qism ESP bilan himoyalanadi?
+• ip xfrm state va ip xfrm policy chiqishlari bir-biridan nimani ko‘rsatadi?
+• tcpdump da ESP ko‘rinishi foydali yuk shifrlanganini qanday asoslaydi va nimani isbotlamaydi?
+• Noto‘g‘ri PSK da ulanish nega o‘rnatilmadi va tiklash muvaffaqiyatini qanday tekshirdingiz?
+• Real muhitda IKEv2 PSK o‘rniga sertifikatli autentifikatsiyani qachon tanlaysiz?
+
+A2 — TLS, SSH va IPsec protokollarini sozlash
+Sahifa 10
+
+TARMOQ XAVFSIZLIGI | 5-semestr | A2 amaliy mashg‘ulot | 1-variant
+
+8. Talaba uchun yakuniy qayd
+Yakuniy xulosada uch protokolni alohida taqqoslang: qaysi trafik himoyalandi, tengdosh yoki foydalanuvchi qanday
+autentifikatsiya qilindi, ishonch qayerdan olindi va muvaffaqiyatsizlik qanday ko‘rindi. “Hammasi shifrlanadi” kabi
+umumiy gap o‘rniga o‘z dalillaringizdagi Protocol/Cipher, verify code, SSH rad javobi, SA holati va ESP kuzatuviga
+tayansangiz, natija tekshiriladigan bo‘ladi.
+Band
+
+Qayd
+
+Talaba F.I.Sh. / Guruh
+
+________________________________ / __________
+
+Bajarilgan sana
+
+____ / ____ / 20____
+
+Olingan ball
+
+________ / 10
+
+O‘qituvchi imzosi
+
+________________________________
+
+9. Foydalanilgan rasmiy qo‘llanmalar
+• Nginx: Configuring HTTPS servers — https://nginx.org/en/docs/http/configuring_https_servers.html
+• OpenSSH: sshd_config qo‘llanmasi — https://man.openbsd.org/sshd_config
+• OpenSSL: openssl-req va openssl-x509 qo‘llanmalari — https://docs.openssl.org/
+• strongSwan: Configuration Quickstart va IPsec Protocol — https://docs.strongswan.org/docs/latest/
+
+A2 — TLS, SSH va IPsec protokollarini sozlash
+Sahifa 11
+
+
